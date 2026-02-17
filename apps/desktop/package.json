@@ -1,0 +1,42 @@
+{
+  "name": "@todo-app/desktop",
+  "version": "0.0.0",
+  "private": true,
+  "main": "dist/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "package": "electron-builder --mac --config",
+    "clean": "rm -rf dist out *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@todo-app/api-client": "workspace:*",
+    "@todo-app/shared-types": "workspace:*",
+    "@todo-app/shared-utils": "workspace:*",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "electron": "^40.4.1",
+    "electron-builder": "^26.7.0",
+    "electron-vite": "^3.1.0",
+    "typescript": "^5.9.3",
+    "vite": "^6.2.0"
+  },
+  "build": {
+    "appId": "com.todoapp.desktop",
+    "productName": "Todo App",
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": ["dmg", "zip"]
+    },
+    "directories": {
+      "output": "release"
+    }
+  }
+}
