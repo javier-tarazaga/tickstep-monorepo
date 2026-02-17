@@ -6,84 +6,96 @@ import type {
   TodoFilters,
   UpdateTodoDto,
 } from "@todo-app/shared-types";
-import { v4 as uuidv4 } from "uuid";
+import { TodoRepository, type TodoRow } from "./todo.repository";
 
 @Injectable()
 export class TodosService {
-  private todos: Todo[] = [];
+  constructor(private readonly todoRepository: TodoRepository) {}
 
-  findAll(filters?: TodoFilters): PaginatedResponse<Todo> {
-    let result = [...this.todos];
-
-    if (filters?.completed !== undefined) {
-      result = result.filter((todo) => todo.completed === filters.completed);
-    }
-
-    if (filters?.search) {
-      const search = filters.search.toLowerCase();
-      result = result.filter(
-        (todo) =>
-          todo.title.toLowerCase().includes(search) ||
-          todo.description?.toLowerCase().includes(search),
-      );
-    }
-
+  async findAll(
+    todoListId: string,
+    filters?: TodoFilters,
+  ): Promise<PaginatedResponse<Todo>> {
     const page = filters?.page ?? 1;
     const limit = filters?.limit ?? 20;
-    const total = result.length;
+
+    const { rows, total } = await this.todoRepository.findAllByListId(
+      todoListId,
+      {
+        completed: filters?.completed,
+        search: filters?.search,
+        page,
+        limit,
+      },
+    );
+
     const totalPages = Math.ceil(total / limit);
-    const start = (page - 1) * limit;
-    const data = result.slice(start, start + limit);
 
-    return { data, total, page, limit, totalPages };
-  }
-
-  findOne(id: string): Todo {
-    const todo = this.todos.find((t) => t.id === id);
-    if (!todo) {
-      throw new NotFoundException(`Todo with id "${id}" not found`);
-    }
-    return todo;
-  }
-
-  create(dto: CreateTodoDto): Todo {
-    const now = new Date().toISOString();
-    const todo: Todo = {
-      id: uuidv4(),
-      title: dto.title,
-      description: dto.description ?? null,
-      completed: false,
-      createdAt: now,
-      updatedAt: now,
+    return {
+      data: rows.map(this.toTodo),
+      total,
+      page,
+      limit,
+      totalPages,
     };
-    this.todos.unshift(todo);
-    return todo;
   }
 
-  update(id: string, dto: UpdateTodoDto): Todo {
-    const todo = this.findOne(id);
-    const now = new Date().toISOString();
-
-    if (dto.title !== undefined) todo.title = dto.title;
-    if (dto.description !== undefined) todo.description = dto.description;
-    if (dto.completed !== undefined) todo.completed = dto.completed;
-    todo.updatedAt = now;
-
-    return todo;
-  }
-
-  remove(id: string): void {
-    const index = this.todos.findIndex((t) => t.id === id);
-    if (index === -1) {
+  async findOne(id: string, todoListId: string): Promise<Todo> {
+    const row = await this.todoRepository.findById(id, todoListId);
+    if (!row) {
       throw new NotFoundException(`Todo with id "${id}" not found`);
     }
-    this.todos.splice(index, 1);
+    return this.toTodo(row);
   }
 
-  toggle(id: string): Todo {
-    const todo = this.findOne(id);
-    todo.completed = !todo.completed;
-    todo.updatedAt = new Date().toISOString();
-    return todo;
+  async create(todoListId: string, dto: CreateTodoDto): Promise<Todo> {
+    const row = await this.todoRepository.create(
+      todoListId,
+      dto.title,
+      dto.description ?? null,
+    );
+    return this.toTodo(row);
+  }
+
+  async update(
+    id: string,
+    todoListId: string,
+    dto: UpdateTodoDto,
+  ): Promise<Todo> {
+    const row = await this.todoRepository.update(id, todoListId, {
+      title: dto.title,
+      description: dto.description,
+      completed: dto.completed,
+    });
+    if (!row) {
+      throw new NotFoundException(`Todo with id "${id}" not found`);
+    }
+    return this.toTodo(row);
+  }
+
+  async remove(id: string, todoListId: string): Promise<void> {
+    const deleted = await this.todoRepository.delete(id, todoListId);
+    if (!deleted) {
+      throw new NotFoundException(`Todo with id "${id}" not found`);
+    }
+  }
+
+  async toggle(id: string, todoListId: string): Promise<Todo> {
+    const row = await this.todoRepository.toggle(id, todoListId);
+    if (!row) {
+      throw new NotFoundException(`Todo with id "${id}" not found`);
+    }
+    return this.toTodo(row);
+  }
+
+  private toTodo(row: TodoRow): Todo {
+    return {
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      completed: row.completed,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString(),
+    };
   }
 }

@@ -1,10 +1,18 @@
 import type {
   ApiResponse,
+  AuthResponse,
+  AuthTokens,
   CreateTodoDto,
+  CreateTodoListDto,
   PaginatedResponse,
+  RefreshTokenRequest,
+  SignInRequest,
+  SignUpRequest,
   Todo,
   TodoFilters,
+  TodoList,
   UpdateTodoDto,
+  UpdateTodoListDto,
 } from "@todo-app/shared-types";
 
 export interface TodoApiClientConfig {
@@ -37,9 +45,11 @@ export class TodoApiClient {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        message: response.statusText,
-      }));
+      const error = (await response
+        .json()
+        .catch(() => ({ message: response.statusText }))) as {
+        message?: string;
+      };
       throw new ApiClientError(
         error.message ?? "Request failed",
         response.status,
@@ -50,7 +60,70 @@ export class TodoApiClient {
     return response.json() as Promise<ApiResponse<T>>;
   }
 
+  // ─── Auth ──────────────────────────────────────────────
+
+  async signUp(dto: SignUpRequest): Promise<ApiResponse<AuthResponse>> {
+    return this.request("/auth/signup", {
+      method: "POST",
+      body: JSON.stringify(dto),
+    });
+  }
+
+  async signIn(dto: SignInRequest): Promise<ApiResponse<AuthResponse>> {
+    return this.request("/auth/signin", {
+      method: "POST",
+      body: JSON.stringify(dto),
+    });
+  }
+
+  async refreshToken(
+    dto: RefreshTokenRequest,
+  ): Promise<ApiResponse<AuthTokens>> {
+    return this.request("/auth/refresh", {
+      method: "POST",
+      body: JSON.stringify(dto),
+    });
+  }
+
+  // ─── Todo Lists ────────────────────────────────────────
+
+  async getTodoLists(): Promise<ApiResponse<TodoList[]>> {
+    return this.request("/todo-lists");
+  }
+
+  async getTodoListById(id: string): Promise<ApiResponse<TodoList>> {
+    return this.request(`/todo-lists/${id}`);
+  }
+
+  async createTodoList(
+    dto: CreateTodoListDto,
+  ): Promise<ApiResponse<TodoList>> {
+    return this.request("/todo-lists", {
+      method: "POST",
+      body: JSON.stringify(dto),
+    });
+  }
+
+  async updateTodoList(
+    id: string,
+    dto: UpdateTodoListDto,
+  ): Promise<ApiResponse<TodoList>> {
+    return this.request(`/todo-lists/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(dto),
+    });
+  }
+
+  async deleteTodoList(id: string): Promise<ApiResponse<void>> {
+    return this.request(`/todo-lists/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  // ─── Todos (scoped to a todo list) ─────────────────────
+
   async getTodos(
+    listId: string,
     filters?: TodoFilters,
   ): Promise<ApiResponse<PaginatedResponse<Todo>>> {
     const params = new URLSearchParams();
@@ -62,38 +135,53 @@ export class TodoApiClient {
       params.set("limit", String(filters.limit));
 
     const query = params.toString();
-    return this.request(`/todos${query ? `?${query}` : ""}`);
+    return this.request(
+      `/todo-lists/${listId}/todos${query ? `?${query}` : ""}`,
+    );
   }
 
-  async getTodoById(id: string): Promise<ApiResponse<Todo>> {
-    return this.request(`/todos/${id}`);
+  async getTodoById(
+    listId: string,
+    id: string,
+  ): Promise<ApiResponse<Todo>> {
+    return this.request(`/todo-lists/${listId}/todos/${id}`);
   }
 
-  async createTodo(dto: CreateTodoDto): Promise<ApiResponse<Todo>> {
-    return this.request("/todos", {
+  async createTodo(
+    listId: string,
+    dto: CreateTodoDto,
+  ): Promise<ApiResponse<Todo>> {
+    return this.request(`/todo-lists/${listId}/todos`, {
       method: "POST",
       body: JSON.stringify(dto),
     });
   }
 
   async updateTodo(
+    listId: string,
     id: string,
     dto: UpdateTodoDto,
   ): Promise<ApiResponse<Todo>> {
-    return this.request(`/todos/${id}`, {
+    return this.request(`/todo-lists/${listId}/todos/${id}`, {
       method: "PATCH",
       body: JSON.stringify(dto),
     });
   }
 
-  async deleteTodo(id: string): Promise<ApiResponse<void>> {
-    return this.request(`/todos/${id}`, {
+  async deleteTodo(
+    listId: string,
+    id: string,
+  ): Promise<ApiResponse<void>> {
+    return this.request(`/todo-lists/${listId}/todos/${id}`, {
       method: "DELETE",
     });
   }
 
-  async toggleTodo(id: string): Promise<ApiResponse<Todo>> {
-    return this.request(`/todos/${id}/toggle`, {
+  async toggleTodo(
+    listId: string,
+    id: string,
+  ): Promise<ApiResponse<Todo>> {
+    return this.request(`/todo-lists/${listId}/todos/${id}/toggle`, {
       method: "PATCH",
     });
   }

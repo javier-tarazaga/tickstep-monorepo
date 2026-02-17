@@ -8,6 +8,7 @@ import {
   Post,
   Query,
   BadRequestException,
+  UseGuards,
 } from "@nestjs/common";
 import type {
   ApiResponse,
@@ -18,19 +19,39 @@ import type {
   UpdateTodoDto,
 } from "@todo-app/shared-types";
 import { validateCreateTodo, validateUpdateTodo } from "@todo-app/shared-utils";
+import { AuthGuard, CurrentUser, type AuthUser } from "../auth";
+import { TodoListsService } from "../todo-lists/todo-lists.service";
 import { TodosService } from "./todos.service";
 
-@Controller("todos")
+@Controller("todo-lists/:listId/todos")
+@UseGuards(AuthGuard)
 export class TodosController {
-  constructor(private readonly todosService: TodosService) {}
+  constructor(
+    private readonly todosService: TodosService,
+    private readonly todoListsService: TodoListsService,
+  ) {}
+
+  /**
+   * Verify the todo list belongs to the authenticated user before any operation.
+   */
+  private async verifyListOwnership(
+    listId: string,
+    user: AuthUser,
+  ): Promise<void> {
+    await this.todoListsService.findOne(listId, user.id);
+  }
 
   @Get()
-  findAll(
+  async findAll(
+    @Param("listId") listId: string,
+    @CurrentUser() user: AuthUser,
     @Query("completed") completed?: string,
     @Query("search") search?: string,
     @Query("page") page?: string,
     @Query("limit") limit?: string,
-  ): ApiResponse<PaginatedResponse<Todo>> {
+  ): Promise<ApiResponse<PaginatedResponse<Todo>>> {
+    await this.verifyListOwnership(listId, user);
+
     const filters: TodoFilters = {
       completed: completed !== undefined ? completed === "true" : undefined,
       search,
@@ -40,20 +61,32 @@ export class TodosController {
 
     return {
       success: true,
-      data: this.todosService.findAll(filters),
+      data: await this.todosService.findAll(listId, filters),
     };
   }
 
   @Get(":id")
-  findOne(@Param("id") id: string): ApiResponse<Todo> {
+  async findOne(
+    @Param("listId") listId: string,
+    @Param("id") id: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<ApiResponse<Todo>> {
+    await this.verifyListOwnership(listId, user);
+
     return {
       success: true,
-      data: this.todosService.findOne(id),
+      data: await this.todosService.findOne(id, listId),
     };
   }
 
   @Post()
-  create(@Body() dto: CreateTodoDto): ApiResponse<Todo> {
+  async create(
+    @Param("listId") listId: string,
+    @Body() dto: CreateTodoDto,
+    @CurrentUser() user: AuthUser,
+  ): Promise<ApiResponse<Todo>> {
+    await this.verifyListOwnership(listId, user);
+
     const errors = validateCreateTodo(dto);
     if (errors.length > 0) {
       throw new BadRequestException({
@@ -71,16 +104,20 @@ export class TodosController {
 
     return {
       success: true,
-      data: this.todosService.create(dto),
+      data: await this.todosService.create(listId, dto),
       message: "Todo created successfully",
     };
   }
 
   @Patch(":id")
-  update(
+  async update(
+    @Param("listId") listId: string,
     @Param("id") id: string,
     @Body() dto: UpdateTodoDto,
-  ): ApiResponse<Todo> {
+    @CurrentUser() user: AuthUser,
+  ): Promise<ApiResponse<Todo>> {
+    await this.verifyListOwnership(listId, user);
+
     const errors = validateUpdateTodo(dto);
     if (errors.length > 0) {
       throw new BadRequestException({
@@ -98,14 +135,20 @@ export class TodosController {
 
     return {
       success: true,
-      data: this.todosService.update(id, dto),
+      data: await this.todosService.update(id, listId, dto),
       message: "Todo updated successfully",
     };
   }
 
   @Delete(":id")
-  remove(@Param("id") id: string): ApiResponse<void> {
-    this.todosService.remove(id);
+  async remove(
+    @Param("listId") listId: string,
+    @Param("id") id: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<ApiResponse<void>> {
+    await this.verifyListOwnership(listId, user);
+
+    await this.todosService.remove(id, listId);
     return {
       success: true,
       data: undefined as unknown as void,
@@ -114,10 +157,16 @@ export class TodosController {
   }
 
   @Patch(":id/toggle")
-  toggle(@Param("id") id: string): ApiResponse<Todo> {
+  async toggle(
+    @Param("listId") listId: string,
+    @Param("id") id: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<ApiResponse<Todo>> {
+    await this.verifyListOwnership(listId, user);
+
     return {
       success: true,
-      data: this.todosService.toggle(id),
+      data: await this.todosService.toggle(id, listId),
       message: "Todo toggled successfully",
     };
   }
