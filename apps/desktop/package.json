@@ -16,7 +16,8 @@
     "@todo-app/shared-types": "workspace:*",
     "@todo-app/shared-utils": "workspace:*",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
@@ -33,7 +34,10 @@
     "productName": "Todo App",
     "mac": {
       "category": "public.app-category.productivity",
-      "target": ["dmg", "zip"]
+      "target": [
+        "dmg",
+        "zip"
+      ]
     },
     "directories": {
       "output": "release"
