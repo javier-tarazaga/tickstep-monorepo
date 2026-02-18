@@ -29,7 +29,17 @@ CREATE TABLE IF NOT EXISTS todos (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Sidebar layout table (stores section/list ordering for cross-device sync)
+CREATE TABLE IF NOT EXISTS sidebar_layouts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  layout JSONB NOT NULL DEFAULT '{"sections":[],"unsectionedListIds":[]}',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT sidebar_layouts_user_id_unique UNIQUE (user_id)
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_todo_lists_user_id ON todo_lists(user_id);
 CREATE INDEX IF NOT EXISTS idx_todos_todo_list_id ON todos(todo_list_id);
 CREATE INDEX IF NOT EXISTS idx_todos_completed ON todos(completed);
+CREATE INDEX IF NOT EXISTS idx_sidebar_layouts_user_id ON sidebar_layouts(user_id);

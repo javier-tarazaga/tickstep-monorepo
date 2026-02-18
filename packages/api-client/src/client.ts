@@ -6,6 +6,8 @@ import type {
   CreateTodoListDto,
   PaginatedResponse,
   RefreshTokenRequest,
+  SidebarLayout,
+  SidebarLayoutResponse,
   SignInRequest,
   SignUpRequest,
   Todo,
@@ -18,18 +20,42 @@ import type {
 export interface TodoApiClientConfig {
   baseUrl: string;
   getHeaders?: () => Record<string, string>;
+  onTokenExpired?: () => Promise<void>;
 }
 
 export class TodoApiClient {
   private baseUrl: string;
   private getHeaders: () => Record<string, string>;
+  private onTokenExpired?: () => Promise<void>;
 
   constructor(config: TodoApiClientConfig) {
     this.baseUrl = config.baseUrl.replace(/\/$/, "");
     this.getHeaders = config.getHeaders ?? (() => ({}));
+    this.onTokenExpired = config.onTokenExpired;
   }
 
   private async request<T>(
+    endpoint: string,
+    options: RequestInit = {},
+  ): Promise<ApiResponse<T>> {
+    try {
+      return await this.executeRequest<T>(endpoint, options);
+    } catch (error) {
+      // On 401, attempt token refresh and retry once
+      if (
+        error instanceof ApiClientError &&
+        error.statusCode === 401 &&
+        this.onTokenExpired &&
+        !endpoint.startsWith("/auth/")
+      ) {
+        await this.onTokenExpired();
+        return this.executeRequest<T>(endpoint, options);
+      }
+      throw error;
+    }
+  }
+
+  private async executeRequest<T>(
     endpoint: string,
     options: RequestInit = {},
   ): Promise<ApiResponse<T>> {
@@ -183,6 +209,21 @@ export class TodoApiClient {
   ): Promise<ApiResponse<Todo>> {
     return this.request(`/todo-lists/${listId}/todos/${id}/toggle`, {
       method: "PATCH",
+    });
+  }
+
+  // ─── Sidebar Layout ──────────────────────────────────
+
+  async getSidebarLayout(): Promise<ApiResponse<SidebarLayoutResponse>> {
+    return this.request("/sidebar-layout");
+  }
+
+  async saveSidebarLayout(
+    layout: SidebarLayout,
+  ): Promise<ApiResponse<SidebarLayoutResponse>> {
+    return this.request("/sidebar-layout", {
+      method: "PUT",
+      body: JSON.stringify({ layout }),
     });
   }
 }

@@ -4,6 +4,7 @@ import { DatabaseModule } from "./database";
 import { AuthModule } from "./auth";
 import { TodoListsModule } from "./todo-lists/todo-lists.module";
 import { TodosModule } from "./todos/todos.module";
+import { SidebarLayoutModule } from "./sidebar-layout/sidebar-layout.module";
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { TodosModule } from "./todos/todos.module";
     AuthModule,
     TodoListsModule,
     TodosModule,
+    SidebarLayoutModule,
   ],
 })
 export class AppModule {}

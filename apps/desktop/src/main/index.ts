@@ -1,5 +1,6 @@
-import { app, BrowserWindow, shell } from "electron";
+import { app, BrowserWindow, shell, ipcMain } from "electron";
 import { join } from "path";
+import * as tokenStorage from "./tokenStorage";
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -35,6 +36,11 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // Auth IPC handlers — bridge between renderer and encrypted storage
+  ipcMain.handle("auth:save", (_event, auth) => tokenStorage.saveAuth(auth));
+  ipcMain.handle("auth:load", () => tokenStorage.loadAuth());
+  ipcMain.handle("auth:clear", () => tokenStorage.clearAuth());
+
   createWindow();
 
   app.on("activate", () => {

@@ -1,5 +1,6 @@
 import { TodoApiClient } from "@todo-app/api-client";
 import { useAuthStore } from "./stores/authStore";
+import { TokenRefreshManager } from "./services/tokenRefreshManager";
 
 const API_BASE_URL = "http://localhost:3000";
 
@@ -12,4 +13,9 @@ export const apiClient = new TodoApiClient({
     }
     return {};
   },
+  onTokenExpired: async () => {
+    await refreshManager.handleTokenExpired();
+  },
 });
+
+const refreshManager = new TokenRefreshManager(apiClient);
