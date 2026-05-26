@@ -2,8 +2,10 @@ import type {
   ApiResponse,
   AuthResponse,
   AuthTokens,
+  CreateLabelDto,
   CreateTodoDto,
   CreateTodoListDto,
+  Label,
   PaginatedResponse,
   RefreshTokenRequest,
   SidebarLayout,
@@ -13,6 +15,7 @@ import type {
   Todo,
   TodoFilters,
   TodoList,
+  UpdateLabelDto,
   UpdateTodoDto,
   UpdateTodoListDto,
 } from "@todo-app/shared-types";
@@ -225,6 +228,61 @@ export class TodoApiClient {
       method: "PUT",
       body: JSON.stringify({ layout }),
     });
+  }
+
+  // ─── Labels (user-global) ────────────────────────────
+
+  async getLabels(): Promise<ApiResponse<Label[]>> {
+    return this.request("/labels");
+  }
+
+  async createLabel(dto: CreateLabelDto): Promise<ApiResponse<Label>> {
+    return this.request("/labels", {
+      method: "POST",
+      body: JSON.stringify(dto),
+    });
+  }
+
+  async updateLabel(
+    id: string,
+    dto: UpdateLabelDto,
+  ): Promise<ApiResponse<Label>> {
+    return this.request(`/labels/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(dto),
+    });
+  }
+
+  async deleteLabel(id: string): Promise<ApiResponse<void>> {
+    return this.request(`/labels/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  // ─── Todo <-> Label assignment (returns the updated todo) ───
+
+  async addLabelToTodo(
+    listId: string,
+    todoId: string,
+    labelId: string,
+  ): Promise<ApiResponse<Todo>> {
+    return this.request(`/todo-lists/${listId}/todos/${todoId}/labels`, {
+      method: "POST",
+      body: JSON.stringify({ labelId }),
+    });
+  }
+
+  async removeLabelFromTodo(
+    listId: string,
+    todoId: string,
+    labelId: string,
+  ): Promise<ApiResponse<Todo>> {
+    return this.request(
+      `/todo-lists/${listId}/todos/${todoId}/labels/${labelId}`,
+      {
+        method: "DELETE",
+      },
+    );
   }
 }
 

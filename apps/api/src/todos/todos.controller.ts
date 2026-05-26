@@ -20,6 +20,7 @@ import type {
 } from "@todo-app/shared-types";
 import { validateCreateTodo, validateUpdateTodo } from "@todo-app/shared-utils";
 import { AuthGuard, CurrentUser, type AuthUser } from "../auth";
+import { LabelsService } from "../labels/labels.service";
 import { TodoListsService } from "../todo-lists/todo-lists.service";
 import { TodosService } from "./todos.service";
 
@@ -29,6 +30,7 @@ export class TodosController {
   constructor(
     private readonly todosService: TodosService,
     private readonly todoListsService: TodoListsService,
+    private readonly labelsService: LabelsService,
   ) {}
 
   /**
@@ -168,6 +170,40 @@ export class TodosController {
       success: true,
       data: await this.todosService.toggle(id, listId),
       message: "Todo toggled successfully",
+    };
+  }
+
+  @Post(":id/labels")
+  async addLabel(
+    @Param("listId") listId: string,
+    @Param("id") id: string,
+    @Body() body: { labelId: string },
+    @CurrentUser() user: AuthUser,
+  ): Promise<ApiResponse<Todo>> {
+    await this.verifyListOwnership(listId, user);
+    // 404 if the label isn't owned by this user.
+    await this.labelsService.findOne(body.labelId, user.id);
+
+    return {
+      success: true,
+      data: await this.todosService.addLabel(id, listId, body.labelId),
+      message: "Label added to todo",
+    };
+  }
+
+  @Delete(":id/labels/:labelId")
+  async removeLabel(
+    @Param("listId") listId: string,
+    @Param("id") id: string,
+    @Param("labelId") labelId: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<ApiResponse<Todo>> {
+    await this.verifyListOwnership(listId, user);
+
+    return {
+      success: true,
+      data: await this.todosService.removeLabel(id, listId, labelId),
+      message: "Label removed from todo",
     };
   }
 }

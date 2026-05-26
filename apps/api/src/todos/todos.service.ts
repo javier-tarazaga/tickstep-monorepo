@@ -4,9 +4,10 @@ import type {
   PaginatedResponse,
   Todo,
   TodoFilters,
+  TodoPriority,
   UpdateTodoDto,
 } from "@todo-app/shared-types";
-import { TodoRepository, type Todo as TodoRow } from "./todo.repository";
+import { TodoRepository, type TodoRow } from "./todo.repository";
 
 @Injectable()
 export class TodosService {
@@ -49,11 +50,12 @@ export class TodosService {
   }
 
   async create(todoListId: string, dto: CreateTodoDto): Promise<Todo> {
-    const row = await this.todoRepository.create(
-      todoListId,
-      dto.title,
-      dto.description ?? null,
-    );
+    const row = await this.todoRepository.create(todoListId, {
+      title: dto.title,
+      description: dto.description ?? null,
+      dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+      priority: dto.priority ?? null,
+    });
     return this.toTodo(row);
   }
 
@@ -66,6 +68,13 @@ export class TodosService {
       title: dto.title,
       description: dto.description,
       completed: dto.completed,
+      dueDate:
+        dto.dueDate === undefined
+          ? undefined
+          : dto.dueDate
+            ? new Date(dto.dueDate)
+            : null,
+      priority: dto.priority,
     });
     if (!row) {
       throw new NotFoundException(`Todo with id "${id}" not found`);
@@ -88,12 +97,40 @@ export class TodosService {
     return this.toTodo(row);
   }
 
+  async addLabel(
+    id: string,
+    todoListId: string,
+    labelId: string,
+  ): Promise<Todo> {
+    // Ensure the todo exists and is owned by this list before mutating the join.
+    await this.findOne(id, todoListId);
+    await this.todoRepository.addLabel(id, labelId);
+    return this.findOne(id, todoListId);
+  }
+
+  async removeLabel(
+    id: string,
+    todoListId: string,
+    labelId: string,
+  ): Promise<Todo> {
+    await this.findOne(id, todoListId);
+    await this.todoRepository.removeLabel(id, labelId);
+    return this.findOne(id, todoListId);
+  }
+
   private toTodo(row: TodoRow): Todo {
     return {
       id: row.id,
       title: row.title,
       description: row.description,
       completed: row.completed,
+      dueDate: row.dueDate?.toISOString() ?? null,
+      priority: (row.priority as TodoPriority | null) ?? null,
+      labels: row.todoLabels.map((tl) => ({
+        id: tl.label.id,
+        name: tl.label.name,
+        color: tl.label.color,
+      })),
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };

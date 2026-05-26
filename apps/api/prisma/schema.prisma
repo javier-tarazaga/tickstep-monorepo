@@ -22,6 +22,7 @@ model User {
 
   todoLists     TodoList[]
   sidebarLayout SidebarLayout?
+  labels        Label[]
 
   @@map("users")
 }
@@ -41,19 +42,50 @@ model TodoList {
 }
 
 model Todo {
-  id          String   @id @default(uuid()) @db.Uuid
-  todoListId  String   @map("todo_list_id") @db.Uuid
-  title       String   @db.VarChar(200)
+  id          String    @id @default(uuid()) @db.Uuid
+  todoListId  String    @map("todo_list_id") @db.Uuid
+  title       String    @db.VarChar(200)
   description String?
-  completed   Boolean  @default(false)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  completed   Boolean   @default(false)
+  dueDate     DateTime? @map("due_date") @db.Timestamptz(6)
+  priority    String?   @map("priority") @db.VarChar(10)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  todoList TodoList @relation(fields: [todoListId], references: [id], onDelete: Cascade)
+  todoList   TodoList    @relation(fields: [todoListId], references: [id], onDelete: Cascade)
+  todoLabels TodoLabel[]
 
   @@index([todoListId], map: "idx_todos_todo_list_id")
   @@index([completed], map: "idx_todos_completed")
   @@map("todos")
+}
+
+model Label {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  name      String   @db.VarChar(50)
+  color     String   @db.VarChar(20)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  todoLabels TodoLabel[]
+
+  @@unique([userId, name], map: "labels_user_id_name_unique")
+  @@index([userId], map: "idx_labels_user_id")
+  @@map("labels")
+}
+
+model TodoLabel {
+  todoId  String @map("todo_id") @db.Uuid
+  labelId String @map("label_id") @db.Uuid
+
+  todo  Todo  @relation(fields: [todoId], references: [id], onDelete: Cascade)
+  label Label @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([todoId, labelId])
+  @@index([labelId], map: "idx_todo_labels_label_id")
+  @@map("todo_labels")
 }
 
 model SidebarLayout {
