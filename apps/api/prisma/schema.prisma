@@ -1,0 +1,68 @@
+// Prisma schema for the TickStep API.
+// Models map to the existing snake_case tables defined in scripts/init-db.sql,
+// so the generated client works against the current database without a data migration.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Transaction-mode pooler (PgBouncer, port 6543) for the running app.
+  url       = env("DATABASE_URL")
+  // Session-mode pooler (port 5432) used by Prisma Migrate / introspection.
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  todoLists     TodoList[]
+  sidebarLayout SidebarLayout?
+
+  @@map("users")
+}
+
+model TodoList {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  name      String   @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  todos Todo[]
+
+  @@index([userId], map: "idx_todo_lists_user_id")
+  @@map("todo_lists")
+}
+
+model Todo {
+  id          String   @id @default(uuid()) @db.Uuid
+  todoListId  String   @map("todo_list_id") @db.Uuid
+  title       String   @db.VarChar(200)
+  description String?
+  completed   Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  todoList TodoList @relation(fields: [todoListId], references: [id], onDelete: Cascade)
+
+  @@index([todoListId], map: "idx_todos_todo_list_id")
+  @@index([completed], map: "idx_todos_completed")
+  @@map("todos")
+}
+
+model SidebarLayout {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique(map: "sidebar_layouts_user_id_unique") @map("user_id") @db.Uuid
+  layout    Json     @default("{\"sections\":[],\"unsectionedListIds\":[]}")
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sidebar_layouts")
+}

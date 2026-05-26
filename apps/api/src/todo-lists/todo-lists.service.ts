@@ -48,17 +48,17 @@ export class TodoListsService {
 
   private toTodoList(row: {
     id: string;
-    user_id: string;
+    userId: string;
     name: string;
-    created_at: string;
-    updated_at: string;
+    createdAt: Date;
+    updatedAt: Date;
   }): TodoList {
     return {
       id: row.id,
-      userId: row.user_id,
+      userId: row.userId,
       name: row.name,
-      createdAt: new Date(row.created_at).toISOString(),
-      updatedAt: new Date(row.updated_at).toISOString(),
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
     };
   }
 }

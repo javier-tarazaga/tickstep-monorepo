@@ -1,58 +1,44 @@
 import { Injectable } from "@nestjs/common";
-import { BaseRepository } from "../database";
+import type { TodoList } from "@prisma/client";
+import { PrismaService } from "../prisma";
 
-export interface TodoListRow {
-  id: string;
-  user_id: string;
-  name: string;
-  created_at: string;
-  updated_at: string;
-}
+export type { TodoList } from "@prisma/client";
 
 @Injectable()
-export class TodoListRepository extends BaseRepository {
-  async findAllByUserId(userId: string): Promise<TodoListRow[]> {
-    return this.queryMany<TodoListRow>(
-      "SELECT * FROM todo_lists WHERE user_id = $1 ORDER BY created_at DESC",
-      [userId],
-    );
+export class TodoListRepository {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async findAllByUserId(userId: string): Promise<TodoList[]> {
+    return this.prisma.todoList.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+    });
   }
 
-  async findById(id: string, userId: string): Promise<TodoListRow | null> {
-    return this.queryOne<TodoListRow>(
-      "SELECT * FROM todo_lists WHERE id = $1 AND user_id = $2",
-      [id, userId],
-    );
+  async findById(id: string, userId: string): Promise<TodoList | null> {
+    return this.prisma.todoList.findFirst({ where: { id, userId } });
   }
 
-  async create(userId: string, name: string): Promise<TodoListRow> {
-    const result = await this.queryOne<TodoListRow>(
-      `INSERT INTO todo_lists (user_id, name)
-       VALUES ($1, $2)
-       RETURNING *`,
-      [userId, name],
-    );
-    return result!;
+  async create(userId: string, name: string): Promise<TodoList> {
+    return this.prisma.todoList.create({ data: { userId, name } });
   }
 
   async update(
     id: string,
     userId: string,
     name: string,
-  ): Promise<TodoListRow | null> {
-    return this.queryOne<TodoListRow>(
-      `UPDATE todo_lists SET name = $1, updated_at = NOW()
-       WHERE id = $2 AND user_id = $3
-       RETURNING *`,
-      [name, id, userId],
-    );
+  ): Promise<TodoList | null> {
+    const { count } = await this.prisma.todoList.updateMany({
+      where: { id, userId },
+      data: { name },
+    });
+    return count > 0 ? this.findById(id, userId) : null;
   }
 
   async delete(id: string, userId: string): Promise<boolean> {
-    const result = await this.query(
-      "DELETE FROM todo_lists WHERE id = $1 AND user_id = $2",
-      [id, userId],
-    );
-    return (result.rowCount ?? 0) > 0;
+    const { count } = await this.prisma.todoList.deleteMany({
+      where: { id, userId },
+    });
+    return count > 0;
   }
 }

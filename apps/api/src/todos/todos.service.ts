@@ -6,7 +6,7 @@ import type {
   TodoFilters,
   UpdateTodoDto,
 } from "@todo-app/shared-types";
-import { TodoRepository, type TodoRow } from "./todo.repository";
+import { TodoRepository, type Todo as TodoRow } from "./todo.repository";
 
 @Injectable()
 export class TodosService {
@@ -94,8 +94,8 @@ export class TodosService {
       title: row.title,
       description: row.description,
       completed: row.completed,
-      createdAt: new Date(row.created_at).toISOString(),
-      updatedAt: new Date(row.updated_at).toISOString(),
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
     };
   }
 }

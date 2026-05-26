@@ -3,24 +3,29 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "build": "nest build",
+    "build": "prisma generate && nest build",
     "dev": "nest start --watch",
     "start": "node dist/main.js",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main.js",
     "lint": "eslint \"{src,test}/**/*.ts\"",
-    "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist *.tsbuildinfo"
+    "typecheck": "prisma generate && tsc --noEmit",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "postinstall": "prisma generate",
+    "prisma:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.13",
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.1.13",
     "@nestjs/platform-express": "^11.1.13",
+    "@prisma/client": "^6.19.3",
     "@supabase/supabase-js": "^2.95.3",
     "@todo-app/shared-types": "workspace:*",
     "@todo-app/shared-utils": "workspace:*",
-    "pg": "^8.18.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "uuid": "^11.1.0"
@@ -30,8 +35,8 @@
     "@nestjs/schematics": "^11.0.0",
     "@types/express": "^5.0.0",
     "@types/node": "^22.13.0",
-    "@types/pg": "^8.16.0",
     "@types/uuid": "^10.0.0",
+    "prisma": "^6.19.3",
     "typescript": "^5.9.3"
   }
 }

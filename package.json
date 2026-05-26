@@ -12,5 +12,8 @@
   "devDependencies": {
     "turbo": "^2.8.8",
     "typescript": "^5.9.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["prisma", "@prisma/client", "@prisma/engines"]
   }
 }

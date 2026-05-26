@@ -23,14 +23,9 @@ export class SidebarLayoutService {
       };
     }
 
-    const layout =
-      typeof row.layout === "string"
-        ? (JSON.parse(row.layout) as SidebarLayout)
-        : (row.layout as unknown as SidebarLayout);
-
     return {
-      layout,
-      updatedAt: new Date(row.updated_at).toISOString(),
+      layout: row.layout as unknown as SidebarLayout,
+      updatedAt: row.updatedAt.toISOString(),
     };
   }
 
@@ -40,14 +35,9 @@ export class SidebarLayoutService {
   ): Promise<SidebarLayoutResponse> {
     const row = await this.sidebarLayoutRepository.upsert(userId, layout);
 
-    const savedLayout =
-      typeof row.layout === "string"
-        ? (JSON.parse(row.layout) as SidebarLayout)
-        : (row.layout as unknown as SidebarLayout);
-
     return {
-      layout: savedLayout,
-      updatedAt: new Date(row.updated_at).toISOString(),
+      layout: row.layout as unknown as SidebarLayout,
+      updatedAt: row.updatedAt.toISOString(),
     };
   }
 }

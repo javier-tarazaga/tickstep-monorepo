@@ -1,33 +1,26 @@
 import { Injectable } from "@nestjs/common";
-import { BaseRepository } from "../database";
+import type { User } from "@prisma/client";
+import { PrismaService } from "../prisma";
 
-export interface UserRow {
-  id: string;
-  email: string;
-  created_at: string;
-  updated_at: string;
-}
+export type { User } from "@prisma/client";
 
 @Injectable()
-export class UserRepository extends BaseRepository {
-  async findById(id: string): Promise<UserRow | null> {
-    return this.queryOne<UserRow>("SELECT * FROM users WHERE id = $1", [id]);
+export class UserRepository {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async findById(id: string): Promise<User | null> {
+    return this.prisma.user.findUnique({ where: { id } });
   }
 
-  async findByEmail(email: string): Promise<UserRow | null> {
-    return this.queryOne<UserRow>("SELECT * FROM users WHERE email = $1", [
-      email,
-    ]);
+  async findByEmail(email: string): Promise<User | null> {
+    return this.prisma.user.findUnique({ where: { email } });
   }
 
-  async upsert(id: string, email: string): Promise<UserRow> {
-    const result = await this.queryOne<UserRow>(
-      `INSERT INTO users (id, email)
-       VALUES ($1, $2)
-       ON CONFLICT (id) DO UPDATE SET email = $2, updated_at = NOW()
-       RETURNING *`,
-      [id, email],
-    );
-    return result!;
+  async upsert(id: string, email: string): Promise<User> {
+    return this.prisma.user.upsert({
+      where: { id },
+      update: { email },
+      create: { id, email },
+    });
   }
 }
