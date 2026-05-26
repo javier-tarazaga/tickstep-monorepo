@@ -23,12 +23,12 @@ export function priorityMeta(p: TodoPriority | null): PriorityMeta | null {
 }
 
 /* ────────────────────────────────────────────────────────
-   Label swatch palette (warm-leaning, theme-agnostic)
+   Label swatch palette (theme-agnostic)
    Each is a valid #rrggbb so it passes the backend HEX_COLOR check.
    ──────────────────────────────────────────────────────── */
 
 export const LABEL_SWATCHES = [
-  "#c2410c", // burnt orange (brand)
+  "#2f7287", // steel blue (brand)
   "#dc2626", // red
   "#d97706", // amber
   "#ca8a04", // gold
