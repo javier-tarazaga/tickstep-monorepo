@@ -27,6 +27,7 @@ build/
 Thumbs.db
 
 # React Native
+apps/mobile/.expo/
 apps/mobile/ios/Pods/
 apps/mobile/android/.gradle/
 apps/mobile/android/app/build/
