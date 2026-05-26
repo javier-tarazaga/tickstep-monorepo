@@ -1799,7 +1799,9 @@ body {
 
 .task-description-input {
   width: 100%;
-  min-height: 80px;
+  min-height: 120px;
+  /* Caps the auto-grow; JS flips overflow-y to auto once content exceeds it. */
+  max-height: 420px;
   resize: none;
   border: none;
   outline: none;
@@ -1812,7 +1814,22 @@ body {
   margin: -4px;
   border-radius: var(--radius-sm);
   transition: box-shadow 0.15s, background 0.15s;
-  overflow: hidden;
+  overflow-y: hidden;
+}
+
+/* Slim scrollbar once the description starts scrolling. */
+.task-description-input::-webkit-scrollbar {
+  width: 8px;
+}
+.task-description-input::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.task-description-input:hover::-webkit-scrollbar-thumb {
+  background: var(--color-text-muted);
+  background-clip: content-box;
 }
 
 .task-description-input::placeholder {

@@ -174,6 +174,9 @@ function useTaskPanelResize() {
 
 type OpenPopover = "date" | "priority" | "label" | null;
 
+/** Tallest the description grows before it starts scrolling internally (px). */
+const MAX_DESCRIPTION_HEIGHT = 420;
+
 function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
   const closeTodo = useNavigationStore((s) => s.closeTodo);
   const { updateTodo, toggleTodo, addLabelToTodo, removeLabelFromTodo } =
@@ -208,12 +211,14 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
   useEffect(() => setTitle(todo.title), [todo.title]);
   useEffect(() => setDescription(todo.description ?? ""), [todo.description]);
 
-  /* Auto-grow the description textarea to fit its content. */
+  /* Auto-grow the description textarea up to a cap, then scroll past it. */
   const grow = () => {
     const el = descRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
+    el.style.height = `${Math.min(el.scrollHeight, MAX_DESCRIPTION_HEIGHT)}px`;
+    el.style.overflowY =
+      el.scrollHeight > MAX_DESCRIPTION_HEIGHT ? "auto" : "hidden";
   };
   useLayoutEffect(grow, [description]);
 
