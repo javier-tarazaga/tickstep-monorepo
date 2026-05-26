@@ -5,6 +5,13 @@ import { useTodosStore } from "../stores/todosStore";
 import { useLabelsStore } from "../stores/labelsStore";
 import { useTodoListsStore } from "../stores/todoListsStore";
 import {
+  clampTaskPanelWidth,
+  TASK_PANEL_DEFAULT_WIDTH,
+  TASK_PANEL_MAX_WIDTH,
+  TASK_PANEL_MIN_WIDTH,
+  usePanelStore,
+} from "../stores/panelStore";
+import {
   CalendarIcon,
   CheckIcon,
   CloseIcon,
@@ -81,6 +88,87 @@ export default function TaskDetailPanel() {
 }
 
 /* ────────────────────────────────────────────────────────
+   Drag-to-resize for the panel's left edge
+   ──────────────────────────────────────────────────────── */
+
+/**
+ * Lets the user drag the panel's left edge to set its width. While dragging we
+ * track a live width locally for smooth frames, then commit it to the persisted
+ * store on release (and on double-click reset to the default).
+ */
+function useTaskPanelResize() {
+  const persistedWidth = usePanelStore((s) => s.taskPanelWidth);
+  const setTaskPanelWidth = usePanelStore((s) => s.setTaskPanelWidth);
+
+  const [dragging, setDragging] = useState(false);
+  const [liveWidth, setLiveWidth] = useState<number | null>(null);
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    // Only the primary button initiates a drag; ignore right/middle clicks.
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = persistedWidth;
+    const handle = e.currentTarget;
+    handle.setPointerCapture(e.pointerId);
+    setDragging(true);
+
+    // The panel hugs the right edge, so dragging left (−Δx) widens it.
+    const onMove = (ev: PointerEvent) => {
+      setLiveWidth(clampTaskPanelWidth(startWidth - (ev.clientX - startX)));
+    };
+    const onUp = (ev: PointerEvent) => {
+      const final = clampTaskPanelWidth(startWidth - (ev.clientX - startX));
+      setTaskPanelWidth(final);
+      setLiveWidth(null);
+      setDragging(false);
+      handle.releasePointerCapture(e.pointerId);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  };
+
+  // Double-click the handle to snap back to the default width.
+  const onDoubleClick = () => setTaskPanelWidth(TASK_PANEL_DEFAULT_WIDTH);
+
+  // Keyboard a11y: focus the handle and nudge the edge with arrow keys.
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const step = e.shiftKey ? 32 : 8;
+    if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      setTaskPanelWidth(persistedWidth + step);
+    } else if (e.key === "ArrowRight") {
+      e.preventDefault();
+      setTaskPanelWidth(persistedWidth - step);
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      setTaskPanelWidth(TASK_PANEL_DEFAULT_WIDTH);
+    }
+  };
+
+  const width = liveWidth ?? persistedWidth;
+
+  return {
+    width,
+    dragging,
+    handleProps: {
+      role: "separator" as const,
+      "aria-orientation": "vertical" as const,
+      "aria-label": "Resize task panel",
+      "aria-valuemin": TASK_PANEL_MIN_WIDTH,
+      "aria-valuemax": TASK_PANEL_MAX_WIDTH,
+      "aria-valuenow": Math.round(width),
+      tabIndex: 0,
+      onPointerDown,
+      onDoubleClick,
+      onKeyDown,
+    },
+  };
+}
+
+/* ────────────────────────────────────────────────────────
    Panel body — the actual editing surface
    ──────────────────────────────────────────────────────── */
 
@@ -113,6 +201,8 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
   const [deletingLabelId, setDeletingLabelId] = useState<string | null>(null);
 
   const descRef = useRef<HTMLTextAreaElement>(null);
+
+  const { width, dragging, handleProps } = useTaskPanelResize();
 
   /* Keep edits in sync if the same todo is updated elsewhere (e.g. toggled). */
   useEffect(() => setTitle(todo.title), [todo.title]);
@@ -229,7 +319,15 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
     todo.dueDate != null && !todo.completed && isOverdue(todo.dueDate);
 
   return (
-    <aside className="task-panel">
+    <aside
+      className={`task-panel ${dragging ? "is-resizing" : ""}`}
+      style={{ width }}
+    >
+      {/* 0 — Left-edge resize handle (drag, double-click to reset, arrows) */}
+      <div className="task-panel-resizer" {...handleProps}>
+        <span className="task-panel-resizer-grip" aria-hidden="true" />
+      </div>
+
       {/* 1 — Titlebar (drag region) */}
       <div className="task-panel-titlebar">
         <button

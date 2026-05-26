@@ -1123,8 +1123,9 @@ body {
 }
 
 .task-panel {
-  width: 360px;
+  width: 360px; /* fallback; the live width is applied inline from panelStore */
   flex-shrink: 0;
+  position: relative;
   background: var(--color-surface);
   border-left: 1px solid var(--color-border);
   box-shadow: var(--color-menu-shadow);
@@ -1133,6 +1134,75 @@ body {
   height: 100%;
   overflow: hidden;
   animation: taskPanelSlideIn 0.18s ease-out;
+  /* Animate keyboard/reset width changes; suppressed mid-drag for 1:1 tracking. */
+  transition: width 0.16s ease;
+}
+
+.task-panel.is-resizing {
+  transition: none;
+  user-select: none;
+}
+
+/* ── Left-edge resize handle ──────────────────────────────
+   A slim hit-zone straddling the panel's border. Hovering or
+   dragging reveals an accent rail; a grip pill marks the grab. */
+.task-panel-resizer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 10px;
+  transform: translateX(-50%);
+  z-index: 5;
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-app-region: no-drag;
+}
+
+/* The accent rail that lights up the edge on hover/drag/focus. */
+.task-panel-resizer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%) scaleX(0.5);
+  background: var(--color-primary);
+  opacity: 0;
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+.task-panel-resizer:hover::after,
+.task-panel-resizer:focus-visible::after,
+.task-panel.is-resizing .task-panel-resizer::after {
+  opacity: 1;
+  transform: translateX(-50%) scaleX(1);
+}
+
+.task-panel-resizer:focus-visible {
+  outline: none;
+}
+
+/* Grip pill — the visual cue you can grab this edge. */
+.task-panel-resizer-grip {
+  width: 4px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--color-border);
+  opacity: 0;
+  transform: scaleY(0.6);
+  transition: opacity 0.14s ease, transform 0.14s ease, background 0.14s ease;
+}
+
+.task-panel-resizer:hover .task-panel-resizer-grip,
+.task-panel-resizer:focus-visible .task-panel-resizer-grip,
+.task-panel.is-resizing .task-panel-resizer-grip {
+  opacity: 1;
+  transform: scaleY(1);
+  background: var(--color-primary);
 }
 
 @keyframes taskPanelSlideIn {
