@@ -2,10 +2,13 @@ import { useEffect } from "react";
 import { useTodoListsStore } from "../stores/todoListsStore";
 import { useTodosStore } from "../stores/todosStore";
 import { useNavigationStore } from "../stores/navigationStore";
+import TodoMeta from "./TodoMeta";
+import TodoLabels from "./TodoLabels";
 
 export default function TodayView() {
   const { lists } = useTodoListsStore();
   const { todosByList, fetchTodos, toggleTodo } = useTodosStore();
+  const { navigateToList, selectTodo, selectedTodoId } = useNavigationStore();
 
   // Fetch todos for all lists on mount
   useEffect(() => {
@@ -29,8 +32,6 @@ export default function TodayView() {
       .map((t) => ({ ...t, listId: list.id, listName: list.name }));
   });
 
-  const { navigateToList } = useNavigationStore();
-
   return (
     <div>
       <div className="page-header">
@@ -51,16 +52,29 @@ export default function TodayView() {
       {todayTodos.length > 0 && (
         <div className="todo-items">
           {todayTodos.map((todo) => (
-            <div key={todo.id} className="todo-item">
+            <div
+              key={todo.id}
+              className={`todo-item ${selectedTodoId === todo.id ? "selected" : ""}`}
+              onClick={() => selectTodo(todo.id, todo.listId)}
+            >
               <button
                 className="todo-checkbox"
-                onClick={() => toggleTodo(todo.listId, todo.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleTodo(todo.listId, todo.id);
+                }}
               />
-              <span className="todo-title">{todo.title}</span>
+              <div className="todo-item-main">
+                <span className="todo-title">{todo.title}</span>
+                <TodoLabels todo={todo} />
+              </div>
+              <TodoMeta todo={todo} />
               <span
                 className="todo-list-badge"
-                style={{ cursor: "pointer" }}
-                onClick={() => navigateToList(todo.listId)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigateToList(todo.listId);
+                }}
               >
                 {todo.listName}
               </span>
@@ -81,16 +95,29 @@ export default function TodayView() {
           </div>
           <div className="todo-items">
             {completedTodos.map((todo) => (
-              <div key={todo.id} className="todo-item">
+              <div
+                key={todo.id}
+                className={`todo-item ${selectedTodoId === todo.id ? "selected" : ""}`}
+                onClick={() => selectTodo(todo.id, todo.listId)}
+              >
                 <button
                   className="todo-checkbox checked"
-                  onClick={() => toggleTodo(todo.listId, todo.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleTodo(todo.listId, todo.id);
+                  }}
                 />
-                <span className="todo-title completed">{todo.title}</span>
+                <div className="todo-item-main">
+                  <span className="todo-title completed">{todo.title}</span>
+                  <TodoLabels todo={todo} />
+                </div>
+                <TodoMeta todo={todo} />
                 <span
                   className="todo-list-badge"
-                  style={{ cursor: "pointer" }}
-                  onClick={() => navigateToList(todo.listId)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigateToList(todo.listId);
+                  }}
                 >
                   {todo.listName}
                 </span>

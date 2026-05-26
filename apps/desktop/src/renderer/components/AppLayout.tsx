@@ -1,6 +1,7 @@
 import Sidebar from "./Sidebar";
 import TodayView from "./TodayView";
 import ListView from "./ListView";
+import TaskDetailPanel from "./TaskDetailPanel";
 import SessionExpiredModal from "./SessionExpiredModal";
 import { useNavigationStore } from "../stores/navigationStore";
 
@@ -19,6 +20,7 @@ export default function AppLayout() {
           )}
         </div>
       </div>
+      <TaskDetailPanel />
       <SessionExpiredModal />
     </div>
   );

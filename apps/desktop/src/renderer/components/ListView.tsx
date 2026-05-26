@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useTodoListsStore } from "../stores/todoListsStore";
 import { useTodosStore } from "../stores/todosStore";
 import { useNavigationStore } from "../stores/navigationStore";
+import TodoMeta from "./TodoMeta";
+import TodoLabels from "./TodoLabels";
 
 interface ListViewProps {
   listId: string;
@@ -11,7 +13,7 @@ export default function ListView({ listId }: ListViewProps) {
   const { lists, deleteList } = useTodoListsStore();
   const { todosByList, isLoading, fetchTodos, addTodo, removeTodo, toggleTodo } =
     useTodosStore();
-  const { navigateToToday } = useNavigationStore();
+  const { navigateToToday, selectTodo, selectedTodoId } = useNavigationStore();
 
   const [newTitle, setNewTitle] = useState("");
 
@@ -75,15 +77,29 @@ export default function ListView({ listId }: ListViewProps) {
       {incompleteTodos.length > 0 && (
         <div className="todo-items" style={{ marginTop: 16 }}>
           {incompleteTodos.map((todo) => (
-            <div key={todo.id} className="todo-item">
+            <div
+              key={todo.id}
+              className={`todo-item ${selectedTodoId === todo.id ? "selected" : ""}`}
+              onClick={() => selectTodo(todo.id, listId)}
+            >
               <button
                 className="todo-checkbox"
-                onClick={() => toggleTodo(listId, todo.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleTodo(listId, todo.id);
+                }}
               />
-              <span className="todo-title">{todo.title}</span>
+              <div className="todo-item-main">
+                <span className="todo-title">{todo.title}</span>
+                <TodoLabels todo={todo} />
+              </div>
+              <TodoMeta todo={todo} />
               <button
                 className="todo-delete"
-                onClick={() => removeTodo(listId, todo.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeTodo(listId, todo.id);
+                }}
                 title="Delete"
               >
                 &times;
@@ -106,15 +122,29 @@ export default function ListView({ listId }: ListViewProps) {
           </div>
           <div className="todo-items">
             {completedTodos.map((todo) => (
-              <div key={todo.id} className="todo-item">
+              <div
+                key={todo.id}
+                className={`todo-item ${selectedTodoId === todo.id ? "selected" : ""}`}
+                onClick={() => selectTodo(todo.id, listId)}
+              >
                 <button
                   className="todo-checkbox checked"
-                  onClick={() => toggleTodo(listId, todo.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleTodo(listId, todo.id);
+                  }}
                 />
-                <span className="todo-title completed">{todo.title}</span>
+                <div className="todo-item-main">
+                  <span className="todo-title completed">{todo.title}</span>
+                  <TodoLabels todo={todo} />
+                </div>
+                <TodoMeta todo={todo} />
                 <button
                   className="todo-delete"
-                  onClick={() => removeTodo(listId, todo.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeTodo(listId, todo.id);
+                  }}
                   title="Delete"
                 >
                   &times;
