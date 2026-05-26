@@ -33,6 +33,16 @@ interface DragData {
   sectionId?: string;
 }
 
+/** Shared inline-add keyboard handling: Enter submits, Escape cancels. */
+function handleInlineAddKeyDown(
+  e: React.KeyboardEvent,
+  action: () => void,
+  cancel: () => void,
+) {
+  if (e.key === "Enter") action();
+  if (e.key === "Escape") cancel();
+}
+
 /* ────────────────────────────────────────────────────────
    SVG Icons
    ──────────────────────────────────────────────────────── */
@@ -172,6 +182,7 @@ interface SortableSectionProps {
   onSelectList: (id: string) => void;
   onToggle: () => void;
   onRemove: () => void;
+  onAddList: (name: string) => void;
 }
 
 function SortableSection({
@@ -181,7 +192,10 @@ function SortableSection({
   onSelectList,
   onToggle,
   onRemove,
+  onAddList,
 }: SortableSectionProps) {
+  const [addingList, setAddingList] = useState(false);
+  const [newListName, setNewListName] = useState("");
   const {
     attributes,
     listeners,
@@ -207,6 +221,19 @@ function SortableSection({
 
   const sortableListIds = orderedLists.map((l) => `list:${section.id}:${l.id}`);
 
+  const handleSubmitList = () => {
+    const trimmed = newListName.trim();
+    if (!trimmed) return;
+    onAddList(trimmed);
+    setNewListName("");
+    setAddingList(false);
+  };
+
+  const cancelAddList = () => {
+    setNewListName("");
+    setAddingList(false);
+  };
+
   return (
     <div ref={setNodeRef} style={style} className="section-group">
       <div className="section-group-header">
@@ -224,6 +251,16 @@ function SortableSection({
           {section.name}
         </button>
         <span className="section-actions">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!section.isExpanded) onToggle();
+              setAddingList(true);
+            }}
+            title="Add list to section"
+          >
+            +
+          </button>
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -253,9 +290,26 @@ function SortableSection({
                 sectionId={section.id}
               />
             ))}
-            {orderedLists.length === 0 && (
+            {orderedLists.length === 0 && !addingList && (
               <div className="section-empty-drop-zone" data-section-id={section.id}>
                 <span>Drop lists here</span>
+              </div>
+            )}
+            {addingList && (
+              <div className="inline-add">
+                <input
+                  autoFocus
+                  placeholder="List name"
+                  value={newListName}
+                  onChange={(e) => setNewListName(e.target.value)}
+                  onKeyDown={(e) =>
+                    handleInlineAddKeyDown(e, handleSubmitList, cancelAddList)
+                  }
+                  onBlur={cancelAddList}
+                />
+                <button onMouseDown={(e) => e.preventDefault()} onClick={handleSubmitList}>
+                  Add
+                </button>
               </div>
             )}
           </div>
@@ -423,15 +477,6 @@ export default function Sidebar() {
     addSection(newName.trim());
     setNewName("");
     setAddingSection(false);
-  };
-
-  const handleKeyDown = (
-    e: React.KeyboardEvent,
-    action: () => void,
-    cancel: () => void,
-  ) => {
-    if (e.key === "Enter") action();
-    if (e.key === "Escape") cancel();
   };
 
   /* ── Drag handlers ─────────────────────────────────── */
@@ -647,7 +692,9 @@ export default function Sidebar() {
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) =>
-                handleKeyDown(e, handleAddList, () => setAddingList(false))
+                handleInlineAddKeyDown(e, handleAddList, () =>
+                  setAddingList(false),
+                )
               }
             />
             <button onClick={handleAddList}>Add</button>
@@ -663,7 +710,7 @@ export default function Sidebar() {
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) =>
-                handleKeyDown(e, handleAddSection, () =>
+                handleInlineAddKeyDown(e, handleAddSection, () =>
                   setAddingSection(false),
                 )
               }
@@ -693,6 +740,10 @@ export default function Sidebar() {
                 onSelectList={navigateToList}
                 onToggle={() => toggleSection(section.id)}
                 onRemove={() => removeSection(section.id)}
+                onAddList={async (name) => {
+                  const created = await createList(name, section.id);
+                  if (created) navigateToList(created.id);
+                }}
               />
             ))}
           </SortableContext>

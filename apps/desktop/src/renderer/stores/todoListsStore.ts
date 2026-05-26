@@ -19,7 +19,8 @@ interface TodoListsState {
 
   fetchLists: () => Promise<void>;
   fetchLayout: () => Promise<void>;
-  createList: (name: string) => Promise<TodoList | null>;
+  /** Create a list. When sectionId is given, the list is placed inside that section instead of unsectioned. */
+  createList: (name: string, sectionId?: string) => Promise<TodoList | null>;
   deleteList: (id: string) => Promise<void>;
 
   addSection: (name: string) => void;
@@ -157,13 +158,23 @@ export const useTodoListsStore = create<TodoListsState>((set) => ({
     }
   },
 
-  createList: async (name: string) => {
+  createList: async (name: string, sectionId?: string) => {
     set({ error: null });
     try {
       const response = await apiClient.createTodoList({ name });
       const newList = response.data;
       set((state) => {
         const lists = [...state.lists, newList];
+        if (sectionId) {
+          // Place the new list inside the target section (expanded so it's visible).
+          const sections = state.sections.map((s) =>
+            s.id === sectionId
+              ? { ...s, listIds: [...s.listIds, newList.id], isExpanded: true }
+              : s,
+          );
+          persistLayout(sections, state.unsectionedListIds);
+          return { lists, sections };
+        }
         const unsectionedListIds = [...state.unsectionedListIds, newList.id];
         persistLayout(state.sections, unsectionedListIds);
         return { lists, unsectionedListIds };
