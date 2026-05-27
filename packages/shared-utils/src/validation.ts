@@ -2,7 +2,6 @@ import type { CreateTodoDto, UpdateTodoDto } from "@todo-app/shared-types";
 
 export const TODO_TITLE_MIN_LENGTH = 1;
 export const TODO_TITLE_MAX_LENGTH = 200;
-export const TODO_DESCRIPTION_MAX_LENGTH = 2000;
 export const LABEL_NAME_MAX_LENGTH = 50;
 
 const PRIORITIES = ["low", "medium", "high"] as const;
@@ -32,16 +31,7 @@ export function validateCreateTodo(
     });
   }
 
-  if (
-    dto.description !== undefined &&
-    dto.description !== null &&
-    dto.description.length > TODO_DESCRIPTION_MAX_LENGTH
-  ) {
-    errors.push({
-      field: "description",
-      message: `Description must be at most ${TODO_DESCRIPTION_MAX_LENGTH} characters`,
-    });
-  }
+  // Description length is unbounded — the DB column is TEXT.
 
   validateTodoDetailFields(dto, errors);
 
@@ -69,16 +59,7 @@ export function validateUpdateTodo(
     }
   }
 
-  if (
-    dto.description !== undefined &&
-    dto.description !== null &&
-    dto.description.length > TODO_DESCRIPTION_MAX_LENGTH
-  ) {
-    errors.push({
-      field: "description",
-      message: `Description must be at most ${TODO_DESCRIPTION_MAX_LENGTH} characters`,
-    });
-  }
+  // Description length is unbounded — the DB column is TEXT.
 
   validateTodoDetailFields(dto, errors);
 
