@@ -246,13 +246,21 @@ body {
 
 /* ── Sidebar ─────────────────────────────────────────────── */
 .sidebar {
-  width: var(--sidebar-width);
+  width: var(--sidebar-width); /* fallback; live width is applied inline from panelStore */
   background: var(--color-sidebar);
   border-right: 1px solid var(--color-border);
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
   flex-shrink: 0;
+  user-select: none;
+  /* Animate keyboard/reset width changes; suppressed mid-drag for 1:1 tracking. */
+  transition: width 0.16s ease;
+}
+
+.sidebar.is-resizing {
+  transition: none;
   user-select: none;
 }
 
@@ -260,6 +268,68 @@ body {
   height: var(--titlebar-height);
   -webkit-app-region: drag;
   flex-shrink: 0;
+}
+
+/* ── Right-edge resize handle ─────────────────────────────
+   A slim hit-zone straddling the sidebar's border. Hovering or
+   dragging reveals an accent rail; a grip pill marks the grab. */
+.sidebar-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 10px;
+  transform: translateX(50%);
+  z-index: 5;
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-app-region: no-drag;
+}
+
+/* The accent rail that lights up the edge on hover/drag/focus. */
+.sidebar-resizer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%) scaleX(0.5);
+  background: var(--color-primary);
+  opacity: 0;
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+.sidebar-resizer:hover::after,
+.sidebar-resizer:focus-visible::after,
+.sidebar.is-resizing .sidebar-resizer::after {
+  opacity: 1;
+  transform: translateX(-50%) scaleX(1);
+}
+
+.sidebar-resizer:focus-visible {
+  outline: none;
+}
+
+/* Grip pill — the visual cue you can grab this edge. */
+.sidebar-resizer-grip {
+  width: 4px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--color-border);
+  opacity: 0;
+  transform: scaleY(0.6);
+  transition: opacity 0.14s ease, transform 0.14s ease, background 0.14s ease;
+}
+
+.sidebar-resizer:hover .sidebar-resizer-grip,
+.sidebar-resizer:focus-visible .sidebar-resizer-grip,
+.sidebar.is-resizing .sidebar-resizer-grip {
+  opacity: 1;
+  transform: scaleY(1);
+  background: var(--color-primary);
 }
 
 .sidebar-content {

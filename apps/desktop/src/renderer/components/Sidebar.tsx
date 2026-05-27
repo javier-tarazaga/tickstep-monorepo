@@ -20,6 +20,13 @@ import { useAuthStore } from "../stores/authStore";
 import { useTodoListsStore } from "../stores/todoListsStore";
 import { useNavigationStore } from "../stores/navigationStore";
 import { useThemeStore, type Theme } from "../stores/themeStore";
+import {
+  clampSidebarWidth,
+  SIDEBAR_DEFAULT_WIDTH,
+  SIDEBAR_MAX_WIDTH,
+  SIDEBAR_MIN_WIDTH,
+  usePanelStore,
+} from "../stores/panelStore";
 import type { ListSection } from "../stores/todoListsStore";
 import ConfirmDialog from "./ConfirmDialog";
 import ListContextMenu from "./ListContextMenu";
@@ -519,6 +526,86 @@ function SortableListItem({
 }
 
 /* ────────────────────────────────────────────────────────
+   Drag-to-resize for the sidebar's right edge
+   ──────────────────────────────────────────────────────── */
+
+/**
+ * Mirror of the task panel's resize behaviour, flipped to the opposite edge.
+ * The sidebar hugs the left of the window, so dragging its right edge right
+ * (+Δx) widens it. Live width is tracked locally during the drag for smooth
+ * frames, then committed to the persisted store on release.
+ */
+function useSidebarResize() {
+  const persistedWidth = usePanelStore((s) => s.sidebarWidth);
+  const setSidebarWidth = usePanelStore((s) => s.setSidebarWidth);
+
+  const [dragging, setDragging] = useState(false);
+  const [liveWidth, setLiveWidth] = useState<number | null>(null);
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    // Only the primary button initiates a drag; ignore right/middle clicks.
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = persistedWidth;
+    const handle = e.currentTarget;
+    handle.setPointerCapture(e.pointerId);
+    setDragging(true);
+
+    const onMove = (ev: PointerEvent) => {
+      setLiveWidth(clampSidebarWidth(startWidth + (ev.clientX - startX)));
+    };
+    const onUp = (ev: PointerEvent) => {
+      setSidebarWidth(clampSidebarWidth(startWidth + (ev.clientX - startX)));
+      setLiveWidth(null);
+      setDragging(false);
+      handle.releasePointerCapture(e.pointerId);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  };
+
+  // Double-click the handle to snap back to the default width.
+  const onDoubleClick = () => setSidebarWidth(SIDEBAR_DEFAULT_WIDTH);
+
+  // Keyboard a11y: focus the handle and nudge the edge with arrow keys.
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const step = e.shiftKey ? 32 : 8;
+    if (e.key === "ArrowRight") {
+      e.preventDefault();
+      setSidebarWidth(persistedWidth + step);
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      setSidebarWidth(persistedWidth - step);
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      setSidebarWidth(SIDEBAR_DEFAULT_WIDTH);
+    }
+  };
+
+  const width = liveWidth ?? persistedWidth;
+
+  return {
+    width,
+    dragging,
+    handleProps: {
+      role: "separator" as const,
+      "aria-orientation": "vertical" as const,
+      "aria-label": "Resize sidebar",
+      "aria-valuemin": SIDEBAR_MIN_WIDTH,
+      "aria-valuemax": SIDEBAR_MAX_WIDTH,
+      "aria-valuenow": Math.round(width),
+      tabIndex: 0,
+      onPointerDown,
+      onDoubleClick,
+      onKeyDown,
+    },
+  };
+}
+
+/* ────────────────────────────────────────────────────────
    Main Sidebar
    ──────────────────────────────────────────────────────── */
 
@@ -573,6 +660,12 @@ export default function Sidebar() {
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeData, setActiveData] = useState<DragData | null>(null);
+
+  const {
+    width: sidebarWidth,
+    dragging: resizing,
+    handleProps: resizeHandleProps,
+  } = useSidebarResize();
 
   useEffect(() => {
     fetchLists();
@@ -882,8 +975,16 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="sidebar">
+    <aside
+      className={`sidebar ${resizing ? "is-resizing" : ""}`}
+      style={{ width: sidebarWidth }}
+    >
       <div className="sidebar-titlebar" />
+
+      {/* Right-edge resize handle (drag, double-click to reset, arrows) */}
+      <div className="sidebar-resizer" {...resizeHandleProps}>
+        <span className="sidebar-resizer-grip" aria-hidden="true" />
+      </div>
 
       <div className="sidebar-content">
         {/* Today */}
