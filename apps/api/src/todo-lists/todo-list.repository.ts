@@ -26,11 +26,11 @@ export class TodoListRepository {
   async update(
     id: string,
     userId: string,
-    name: string,
+    data: { name?: string; emoji?: string | null },
   ): Promise<TodoList | null> {
     const { count } = await this.prisma.todoList.updateMany({
       where: { id, userId },
-      data: { name },
+      data,
     });
     return count > 0 ? this.findById(id, userId) : null;
   }

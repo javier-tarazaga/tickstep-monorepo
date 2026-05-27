@@ -130,3 +130,14 @@ export function TrashIcon({ size = 16 }: IconProps) {
     </svg>
   );
 }
+
+/** Smiley — pick / change an emoji icon. */
+export function SmileIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...svgProps(size)}>
+      <circle cx="8" cy="8" r="6.25" />
+      <path d="M5.5 9.5c.6.9 1.5 1.4 2.5 1.4s1.9-.5 2.5-1.4" />
+      <path d="M6 6.25h.01M10 6.25h.01" />
+    </svg>
+  );
+}

@@ -21,6 +21,9 @@ import { useTodoListsStore } from "../stores/todoListsStore";
 import { useNavigationStore } from "../stores/navigationStore";
 import { useThemeStore, type Theme } from "../stores/themeStore";
 import type { ListSection } from "../stores/todoListsStore";
+import ConfirmDialog from "./ConfirmDialog";
+import ListContextMenu from "./ListContextMenu";
+import EmojiPickerPopover from "./EmojiPickerPopover";
 
 /* ────────────────────────────────────────────────────────
    Types
@@ -31,6 +34,33 @@ type DragItemType = "section" | "list";
 interface DragData {
   type: DragItemType;
   sectionId?: string;
+}
+
+/** The minimal shape a list needs to render in the sidebar. */
+interface SidebarList {
+  id: string;
+  name: string;
+  emoji?: string | null;
+}
+
+/**
+ * Shared interaction wiring handed to every list row. Lifting this to the
+ * Sidebar lets a single context menu, emoji picker, and rename input drive any
+ * row regardless of whether it lives in a section or unsectioned.
+ */
+interface ListItemController {
+  selectedListId: string | null;
+  renamingListId: string | null;
+  /** The list whose menu or emoji picker is currently open (kept visually active). */
+  openListId: string | null;
+  /** The list whose emoji just changed — plays a one-shot pop animation. */
+  poppedListId: string | null;
+  onSelect: (listId: string) => void;
+  onContextMenu: (e: React.MouseEvent, listId: string) => void;
+  onStartRename: (listId: string) => void;
+  onSubmitRename: (listId: string, name: string) => void;
+  onCancelRename: () => void;
+  onOpenEmoji: (listId: string, anchor: { x: number; y: number }) => void;
 }
 
 /** Shared inline-add keyboard handling: Enter submits, Escape cancels. */
@@ -177,9 +207,8 @@ function GripIcon({ size = 12 }: { size?: number }) {
 
 interface SortableSectionProps {
   section: ListSection;
-  lists: { id: string; name: string }[];
-  selectedListId: string | null;
-  onSelectList: (id: string) => void;
+  lists: SidebarList[];
+  controller: ListItemController;
   onToggle: () => void;
   onRemove: () => void;
   onAddList: (name: string) => void;
@@ -188,8 +217,7 @@ interface SortableSectionProps {
 function SortableSection({
   section,
   lists,
-  selectedListId,
-  onSelectList,
+  controller,
   onToggle,
   onRemove,
   onAddList,
@@ -217,7 +245,7 @@ function SortableSection({
   const sectionLists = lists.filter((l) => section.listIds.includes(l.id));
   const orderedLists = section.listIds
     .map((id) => sectionLists.find((l) => l.id === id))
-    .filter(Boolean) as { id: string; name: string }[];
+    .filter(Boolean) as SidebarList[];
 
   const sortableListIds = orderedLists.map((l) => `list:${section.id}:${l.id}`);
 
@@ -283,10 +311,8 @@ function SortableSection({
               <SortableListItem
                 key={list.id}
                 id={`list:${section.id}:${list.id}`}
-                listId={list.id}
-                name={list.name}
-                isActive={selectedListId === list.id}
-                onSelect={() => onSelectList(list.id)}
+                list={list}
+                controller={controller}
                 sectionId={section.id}
               />
             ))}
@@ -323,20 +349,39 @@ function SortableSection({
    Sortable List Item
    ──────────────────────────────────────────────────────── */
 
+/** The list's icon: its chosen emoji, or a neutral default glyph when unset. */
+function ListIconGlyph({
+  emoji,
+  popped,
+}: {
+  emoji?: string | null;
+  popped?: boolean;
+}) {
+  if (emoji) {
+    // `key` remounts the span when the emoji changes so the pop replays.
+    return (
+      <span
+        key={emoji}
+        className={`nav-emoji ${popped ? "nav-emoji-pop" : ""}`}
+      >
+        {emoji}
+      </span>
+    );
+  }
+  return <span className="nav-icon-default">&#9776;</span>;
+}
+
 interface SortableListItemProps {
   id: string;
-  listId: string;
-  name: string;
-  isActive: boolean;
-  onSelect: () => void;
+  list: SidebarList;
+  controller: ListItemController;
   sectionId?: string;
 }
 
 function SortableListItem({
   id,
-  name,
-  isActive,
-  onSelect,
+  list,
+  controller,
   sectionId,
 }: SortableListItemProps) {
   const {
@@ -357,6 +402,61 @@ function SortableListItem({
     opacity: isDragging ? 0.3 : 1,
   };
 
+  const isActive = controller.selectedListId === list.id;
+  const isRenaming = controller.renamingListId === list.id;
+  const isOpen = controller.openListId === list.id;
+  const isPopped = controller.poppedListId === list.id;
+
+  const iconRef = useRef<HTMLButtonElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [draft, setDraft] = useState(list.name);
+  // Set when Escape is pressed so the trailing blur discards instead of saving.
+  const cancelled = useRef(false);
+
+  useEffect(() => {
+    if (!isRenaming) return;
+    setDraft(list.name);
+    cancelled.current = false;
+    // Focus + select on the next frame, once the input is mounted.
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    });
+  }, [isRenaming, list.name]);
+
+  const submitRename = () => {
+    if (cancelled.current) {
+      cancelled.current = false;
+      controller.onCancelRename();
+      return;
+    }
+    const trimmed = draft.trim();
+    if (trimmed && trimmed !== list.name) {
+      controller.onSubmitRename(list.id, trimmed);
+    } else {
+      controller.onCancelRename();
+    }
+  };
+
+  const openEmoji = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const rect = iconRef.current?.getBoundingClientRect();
+    if (rect) controller.onOpenEmoji(list.id, { x: rect.left, y: rect.bottom + 4 });
+  };
+
+  const iconButton = (
+    <button
+      ref={iconRef}
+      type="button"
+      className="nav-icon-btn"
+      onClick={openEmoji}
+      title="Change icon"
+      aria-label="Change list icon"
+    >
+      <ListIconGlyph emoji={list.emoji} popped={isPopped} />
+    </button>
+  );
+
   return (
     <div ref={setNodeRef} style={style} className="nav-item-wrapper">
       <span
@@ -366,13 +466,54 @@ function SortableListItem({
       >
         <GripIcon size={10} />
       </span>
-      <button
-        className={`nav-item ${isActive ? "active" : ""}`}
-        onClick={onSelect}
-      >
-        <span className="nav-icon">&#9776;</span>
-        {name}
-      </button>
+
+      {isRenaming ? (
+        <div className="nav-item nav-item-editing">
+          {iconButton}
+          <input
+            ref={inputRef}
+            className="nav-rename-input"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={submitRename}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                e.currentTarget.blur();
+              } else if (e.key === "Escape") {
+                e.stopPropagation();
+                cancelled.current = true;
+                e.currentTarget.blur();
+              }
+            }}
+          />
+        </div>
+      ) : (
+        <div
+          className={`nav-item ${isActive ? "active" : ""} ${isOpen ? "is-open" : ""}`}
+          role="button"
+          tabIndex={0}
+          onClick={() => controller.onSelect(list.id)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              controller.onSelect(list.id);
+            }
+          }}
+          onContextMenu={(e) => controller.onContextMenu(e, list.id)}
+        >
+          {iconButton}
+          <span
+            className="nav-item-label"
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              controller.onStartRename(list.id);
+            }}
+          >
+            {list.name}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -391,6 +532,8 @@ export default function Sidebar() {
     fetchLists,
     fetchLayout,
     createList,
+    updateList,
+    deleteList,
     addSection,
     removeSection,
     toggleSection,
@@ -403,6 +546,24 @@ export default function Sidebar() {
   } = useTodoListsStore();
   const { currentView, selectedListId, navigateToToday, navigateToList } =
     useNavigationStore();
+
+  /* Per-list interaction state (one at a time, lifted out of the rows). */
+  const [menu, setMenu] = useState<{
+    listId: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [renamingListId, setRenamingListId] = useState<string | null>(null);
+  const [emoji, setEmoji] = useState<{
+    listId: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [deleting, setDeleting] = useState<{ id: string; name: string } | null>(
+    null,
+  );
+  const [poppedListId, setPoppedListId] = useState<string | null>(null);
+  const popTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [addingList, setAddingList] = useState(false);
@@ -477,6 +638,87 @@ export default function Sidebar() {
     addSection(newName.trim());
     setNewName("");
     setAddingSection(false);
+  };
+
+  /* ── List row interactions (rename / emoji / delete) ───── */
+
+  const startRename = (listId: string) => {
+    setMenu(null);
+    setEmoji(null);
+    setRenamingListId(listId);
+  };
+
+  const openEmojiAt = (listId: string, anchor: { x: number; y: number }) => {
+    setMenu(null);
+    setRenamingListId(null);
+    setEmoji({ listId, x: anchor.x, y: anchor.y });
+  };
+
+  /** Briefly flag a list so its icon plays a one-shot pop after an emoji change. */
+  const triggerPop = (listId: string) => {
+    setPoppedListId(listId);
+    if (popTimer.current) clearTimeout(popTimer.current);
+    popTimer.current = setTimeout(() => setPoppedListId(null), 420);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (popTimer.current) clearTimeout(popTimer.current);
+    };
+  }, []);
+
+  const handleSelectEmoji = (native: string) => {
+    if (!emoji) return;
+    const listId = emoji.listId;
+    updateList(listId, { emoji: native });
+    triggerPop(listId);
+    setEmoji(null);
+  };
+
+  const handleRemoveEmoji = () => {
+    if (!emoji) return;
+    // null clears the icon back to the default glyph (matches the stored value).
+    updateList(emoji.listId, { emoji: null });
+    setEmoji(null);
+  };
+
+  const requestDeleteFromMenu = () => {
+    if (!menu) return;
+    const target = lists.find((l) => l.id === menu.listId);
+    setMenu(null);
+    if (target) setDeleting({ id: target.id, name: target.name });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleting) return;
+    const id = deleting.id;
+    setDeleting(null);
+    await deleteList(id);
+    // If we're still viewing the list we just deleted, fall back to Today.
+    // Read the live selection rather than the value closed over at open time.
+    if (useNavigationStore.getState().selectedListId === id) navigateToToday();
+  };
+
+  const listController: ListItemController = {
+    selectedListId,
+    renamingListId,
+    openListId: menu?.listId ?? emoji?.listId ?? null,
+    poppedListId,
+    onSelect: navigateToList,
+    onContextMenu: (e, listId) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setRenamingListId(null);
+      setEmoji(null);
+      setMenu({ listId, x: e.clientX, y: e.clientY });
+    },
+    onStartRename: startRename,
+    onSubmitRename: (listId, name) => {
+      updateList(listId, { name });
+      setRenamingListId(null);
+    },
+    onCancelRename: () => setRenamingListId(null),
+    onOpenEmoji: openEmojiAt,
   };
 
   /* ── Drag handlers ─────────────────────────────────── */
@@ -626,10 +868,12 @@ export default function Sidebar() {
           <span className="drag-handle list-drag-handle">
             <GripIcon size={10} />
           </span>
-          <button className="nav-item active">
-            <span className="nav-icon">&#9776;</span>
-            {list.name}
-          </button>
+          <div className="nav-item active">
+            <span className="nav-icon-btn">
+              <ListIconGlyph emoji={list.emoji} />
+            </span>
+            <span className="nav-item-label">{list.name}</span>
+          </div>
         </div>
       );
     }
@@ -736,8 +980,7 @@ export default function Sidebar() {
                 key={section.id}
                 section={section}
                 lists={lists}
-                selectedListId={selectedListId}
-                onSelectList={navigateToList}
+                controller={listController}
                 onToggle={() => toggleSection(section.id)}
                 onRemove={() => removeSection(section.id)}
                 onAddList={async (name) => {
@@ -757,10 +1000,8 @@ export default function Sidebar() {
                 <SortableListItem
                   key={list.id}
                   id={`list:unsectioned:${list.id}`}
-                  listId={list.id}
-                  name={list.name}
-                  isActive={selectedListId === list.id}
-                  onSelect={() => navigateToList(list.id)}
+                  list={list}
+                  controller={listController}
                 />
               ))}
             </div>
@@ -796,6 +1037,49 @@ export default function Sidebar() {
           </span>
         </button>
       </div>
+
+      {/* Right-click menu for a list row */}
+      {menu && (
+        <ListContextMenu
+          x={menu.x}
+          y={menu.y}
+          onRename={() => startRename(menu.listId)}
+          onChangeEmoji={() =>
+            openEmojiAt(menu.listId, { x: menu.x, y: menu.y })
+          }
+          onDelete={requestDeleteFromMenu}
+          onClose={() => setMenu(null)}
+        />
+      )}
+
+      {/* Emoji picker for the list icon */}
+      {emoji && (
+        <EmojiPickerPopover
+          anchor={{ x: emoji.x, y: emoji.y }}
+          hasEmoji={!!lists.find((l) => l.id === emoji.listId)?.emoji}
+          onSelect={handleSelectEmoji}
+          onRemove={handleRemoveEmoji}
+          onClose={() => setEmoji(null)}
+        />
+      )}
+
+      {/* Delete confirmation */}
+      <ConfirmDialog
+        open={!!deleting}
+        title="Delete list?"
+        message={
+          deleting ? (
+            <>
+              <strong>{deleting.name}</strong> and all of its tasks will be
+              permanently deleted. This can&rsquo;t be undone.
+            </>
+          ) : null
+        }
+        confirmLabel="Delete list"
+        danger
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleting(null)}
+      />
     </aside>
   );
 }

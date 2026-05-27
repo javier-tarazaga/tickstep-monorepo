@@ -1,5 +1,10 @@
 import { create } from "zustand";
-import type { TodoList, SidebarLayout, SidebarSection } from "@todo-app/shared-types";
+import type {
+  TodoList,
+  SidebarLayout,
+  SidebarSection,
+  UpdateTodoListDto,
+} from "@todo-app/shared-types";
 import { apiClient } from "../api";
 
 /** A "section" is a named grouping of lists */
@@ -21,6 +26,8 @@ interface TodoListsState {
   fetchLayout: () => Promise<void>;
   /** Create a list. When sectionId is given, the list is placed inside that section instead of unsectioned. */
   createList: (name: string, sectionId?: string) => Promise<TodoList | null>;
+  /** Patch a list's name and/or emoji. Updates optimistically and rolls back on failure. */
+  updateList: (id: string, dto: UpdateTodoListDto) => Promise<boolean>;
   deleteList: (id: string) => Promise<void>;
 
   addSection: (name: string) => void;
@@ -185,6 +192,41 @@ export const useTodoListsStore = create<TodoListsState>((set) => ({
         error: err instanceof Error ? err.message : "Failed to create list",
       });
       return null;
+    }
+  },
+
+  updateList: async (id: string, dto: UpdateTodoListDto) => {
+    // Snapshot inside set() so the rollback value is atomic even if another
+    // updateList for the same list is already in flight.
+    let target: TodoList | undefined;
+    set((state) => {
+      target = state.lists.find((l) => l.id === id);
+      if (!target) return state;
+      // Optimistically apply the patch so rename/emoji feel instant.
+      return {
+        error: null,
+        lists: state.lists.map((l) => (l.id === id ? { ...l, ...dto } : l)),
+      };
+    });
+    if (!target) return false;
+    const rollback = target;
+
+    try {
+      const response = await apiClient.updateTodoList(id, dto);
+      const updated = response.data;
+      // Merge (not replace) so a slow response for one field doesn't clobber a
+      // newer optimistic edit to another field on the same list.
+      set((state) => ({
+        lists: state.lists.map((l) => (l.id === id ? { ...l, ...updated } : l)),
+      }));
+      return true;
+    } catch (err) {
+      // Roll back to the value before this edit.
+      set((state) => ({
+        lists: state.lists.map((l) => (l.id === id ? rollback : l)),
+        error: err instanceof Error ? err.message : "Failed to update list",
+      }));
+      return false;
     }
   },
 

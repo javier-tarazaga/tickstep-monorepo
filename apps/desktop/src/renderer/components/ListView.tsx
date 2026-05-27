@@ -10,10 +10,10 @@ interface ListViewProps {
 }
 
 export default function ListView({ listId }: ListViewProps) {
-  const { lists, deleteList } = useTodoListsStore();
+  const { lists } = useTodoListsStore();
   const { todosByList, isLoading, fetchTodos, addTodo, removeTodo, toggleTodo } =
     useTodosStore();
-  const { navigateToToday, selectTodo, selectedTodoId } = useNavigationStore();
+  const { selectTodo, selectedTodoId } = useNavigationStore();
 
   const [newTitle, setNewTitle] = useState("");
 
@@ -33,11 +33,6 @@ export default function ListView({ listId }: ListViewProps) {
     setNewTitle("");
   };
 
-  const handleDeleteList = async () => {
-    await deleteList(listId);
-    navigateToToday();
-  };
-
   if (!list) {
     return (
       <div className="empty-state">
@@ -51,10 +46,14 @@ export default function ListView({ listId }: ListViewProps) {
   return (
     <div>
       <div className="list-header">
-        <h2>{list.name}</h2>
-        <button className="btn-delete-list" onClick={handleDeleteList}>
-          Delete list
-        </button>
+        <h2>
+          {list.emoji && (
+            <span className="list-header-emoji" aria-hidden="true">
+              {list.emoji}
+            </span>
+          )}
+          {list.name}
+        </h2>
       </div>
 
       {/* Add todo form */}

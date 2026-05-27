@@ -5,8 +5,15 @@ export interface TodoList {
   id: string;
   userId: string;
   name: string;
+  emoji: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Fields that can be patched on a list. Omit a field to leave it unchanged. */
+export interface UpdateTodoListData {
+  name?: string;
+  emoji?: string | null;
 }
 
 @Injectable()
@@ -31,8 +38,12 @@ export class TodoListsService {
     return this.toTodoList(row);
   }
 
-  async update(id: string, userId: string, name: string): Promise<TodoList> {
-    const row = await this.todoListRepository.update(id, userId, name);
+  async update(
+    id: string,
+    userId: string,
+    data: UpdateTodoListData,
+  ): Promise<TodoList> {
+    const row = await this.todoListRepository.update(id, userId, data);
     if (!row) {
       throw new NotFoundException(`Todo list with id "${id}" not found`);
     }
@@ -50,6 +61,7 @@ export class TodoListsService {
     id: string;
     userId: string;
     name: string;
+    emoji: string | null;
     createdAt: Date;
     updatedAt: Date;
   }): TodoList {
@@ -57,6 +69,7 @@ export class TodoListsService {
       id: row.id,
       userId: row.userId,
       name: row.name,
+      emoji: row.emoji,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };
