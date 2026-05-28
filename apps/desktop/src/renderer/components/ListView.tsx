@@ -170,6 +170,14 @@ export default function ListView({ listId }: ListViewProps) {
             placeholder="add a new item…"
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
+            onKeyDown={(e) => {
+              // Escape leaves the field (insert → normal) so pane navigation
+              // keys work again instead of being swallowed by the input.
+              if (e.key === "Escape") {
+                e.stopPropagation();
+                e.currentTarget.blur();
+              }
+            }}
           />
           <button type="submit">add</button>
         </form>

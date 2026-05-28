@@ -12,6 +12,12 @@ function isTypingTarget(target: EventTarget | null): boolean {
   return tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable;
 }
 
+/** Release a focused text field so the keyboard returns to pane navigation. */
+function blurActiveTypingTarget() {
+  const el = document.activeElement;
+  if (isTypingTarget(el)) (el as HTMLElement).blur();
+}
+
 /** Move the keyboard cursor by `delta` rows and scroll the new row into view. */
 function moveCursor(delta: number) {
   const order = getVisibleTodoOrder();
@@ -172,21 +178,26 @@ export function useGlobalShortcuts() {
         return;
       }
 
-      // Plain keys must not hijack typing.
-      if (isTypingTarget(e.target)) return;
-
-      // Switch the active pane: 1/2/3 jump, Tab/⇧Tab cycle. Bare keys only, so
-      // OS chords like ⌘1 keep their meaning.
-      if (!mod && (e.key === "1" || e.key === "2" || e.key === "3")) {
-        e.preventDefault();
-        activateSection(Number(e.key) as Section);
-        return;
-      }
+      // Tab/⇧Tab cycle panes from anywhere — including while a field is focused
+      // — so the keyboard is never trapped inside an input. Blur the field first
+      // so the destination pane fully owns the keyboard.
       if (!mod && e.key === "Tab") {
         e.preventDefault();
+        blurActiveTypingTarget();
         const dir = e.shiftKey ? -1 : 1;
         useUiStore.getState().cycleSection(dir);
         activateSection(useUiStore.getState().activeSection);
+        return;
+      }
+
+      // Plain keys must not hijack typing.
+      if (isTypingTarget(e.target)) return;
+
+      // Jump to a pane by number. Bare keys only, so OS chords like ⌘1 keep
+      // their meaning and digits stay typeable inside fields above.
+      if (!mod && (e.key === "1" || e.key === "2" || e.key === "3")) {
+        e.preventDefault();
+        activateSection(Number(e.key) as Section);
         return;
       }
 
