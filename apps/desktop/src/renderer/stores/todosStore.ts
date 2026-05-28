@@ -36,6 +36,22 @@ interface TodosState {
   applyLabelRemoval: (labelId: string) => void;
 }
 
+/**
+ * Per-list request token ("epoch"). A `fetchTodos` records the current token
+ * when it dispatches and only commits its result if the token is still current.
+ * Every optimistic mutation bumps the token, so a GET that was already in flight
+ * when you edited can no longer overwrite your change with stale server data.
+ * It also dedupes overlapping fetches — the latest one wins.
+ */
+const loadToken = new Map<string, number>();
+
+/** Invalidate any in-flight fetch for a list and return the new current token. */
+function bumpLoadToken(listId: string): number {
+  const next = (loadToken.get(listId) ?? 0) + 1;
+  loadToken.set(listId, next);
+  return next;
+}
+
 export const useTodosStore = create<TodosState>((set, get) => ({
   todosByList: {},
   isLoading: false,
@@ -43,8 +59,15 @@ export const useTodosStore = create<TodosState>((set, get) => ({
 
   fetchTodos: async (listId: string) => {
     set({ isLoading: true, error: null });
+    const token = bumpLoadToken(listId);
     try {
       const response = await apiClient.getTodos(listId);
+      // A newer fetch or an optimistic mutation superseded this response while
+      // it was in flight — drop it rather than clobber the current state.
+      if (loadToken.get(listId) !== token) {
+        set({ isLoading: false });
+        return;
+      }
       set((state) => ({
         todosByList: { ...state.todosByList, [listId]: response.data.data },
         isLoading: false,
@@ -58,6 +81,8 @@ export const useTodosStore = create<TodosState>((set, get) => ({
   },
 
   addTodo: async (listId: string, title: string) => {
+    // Invalidate any in-flight fetch so it can't wipe this optimistic insert.
+    bumpLoadToken(listId);
     // Optimistic: insert a placeholder with a temp id so the row appears on
     // submit, then swap in the server's todo (real id) once it returns.
     const tempId = crypto.randomUUID();
@@ -107,6 +132,8 @@ export const useTodosStore = create<TodosState>((set, get) => ({
   },
 
   removeTodo: async (listId: string, todoId: string) => {
+    // Invalidate any in-flight fetch so it can't resurrect the removed row.
+    bumpLoadToken(listId);
     // Optimistic: drop the row immediately, keeping a snapshot to roll back to.
     const previous = get().todosByList[listId];
 
@@ -135,6 +162,8 @@ export const useTodosStore = create<TodosState>((set, get) => ({
   },
 
   toggleTodo: async (listId: string, todoId: string) => {
+    // Invalidate any in-flight fetch so a stale GET can't revert this toggle.
+    bumpLoadToken(listId);
     // Optimistic: flip `completed` immediately so the checkbox responds
     // instantly, keeping a snapshot to roll back to. Toggling only ever
     // changes `completed` server-side, so the local flip is exact.
@@ -175,6 +204,8 @@ export const useTodosStore = create<TodosState>((set, get) => ({
   },
 
   updateTodo: async (listId, todoId, dto) => {
+    // Invalidate any in-flight fetch so it can't overwrite this optimistic edit.
+    bumpLoadToken(listId);
     // Optimistic merge — these fields are low-stakes.
     set((state) => ({
       todosByList: {
@@ -204,6 +235,8 @@ export const useTodosStore = create<TodosState>((set, get) => ({
   },
 
   addLabelToTodo: async (listId, todoId, labelId) => {
+    // Invalidate any in-flight fetch so it can't drop this optimistic label.
+    bumpLoadToken(listId);
     // Optimistic: attach the label immediately so chips appear on click.
     const label = useLabelsStore
       .getState()
@@ -248,6 +281,8 @@ export const useTodosStore = create<TodosState>((set, get) => ({
   },
 
   removeLabelFromTodo: async (listId, todoId, labelId) => {
+    // Invalidate any in-flight fetch so it can't restore the removed label.
+    bumpLoadToken(listId);
     // Optimistic: drop the chip immediately, keeping a snapshot to roll back to.
     const previous = get().todosByList[listId];
 
