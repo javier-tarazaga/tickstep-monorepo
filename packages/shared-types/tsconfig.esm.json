@@ -1,0 +1,18 @@
+{
+  // ESM half of the dual build. Inherits the base config's ESM settings
+  // (module: ESNext, moduleResolution: bundler) — the same setup api-client
+  // uses — so bundlers (Vite/Metro) get real, statically-traceable named
+  // exports. The CJS half (tsconfig.json) is unchanged and still feeds the
+  // NestJS server via the package's `require` export condition. Declarations
+  // are emitted only by the CJS build (they're module-format-agnostic), so
+  // both export conditions point at the same .d.ts files.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist/esm",
+    "rootDir": "./src",
+    "declaration": false,
+    "declarationMap": false,
+    "incremental": false
+  },
+  "include": ["src/**/*.ts"]
+}

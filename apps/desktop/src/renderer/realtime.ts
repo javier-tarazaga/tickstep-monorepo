@@ -1,7 +1,4 @@
 import { io, type Socket } from "socket.io-client";
-// Import the runtime value from the package subpath: the main barrel re-exports
-// it through a CJS getter the renderer bundler (Rollup) can't statically trace,
-// whereas this module exports it as a direct assignment it can.
 import {
   WS_EVENTS,
   type ListDeletedPayload,
@@ -9,7 +6,7 @@ import {
   type TodoCreatedPayload,
   type TodoDeletedPayload,
   type TodoUpdatedPayload,
-} from "@tickstep/shared-types/ws-events";
+} from "@tickstep/shared-types";
 import { API_BASE_URL } from "./api";
 import { useTodosStore } from "./stores/todosStore";
 import { useTodoListsStore } from "./stores/todoListsStore";

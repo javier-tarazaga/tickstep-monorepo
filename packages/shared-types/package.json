@@ -7,17 +7,17 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
+      "import": "./dist/esm/index.js",
       "require": "./dist/index.js"
     },
     "./ws-events": {
       "types": "./dist/ws-events.d.ts",
-      "import": "./dist/ws-events.js",
+      "import": "./dist/esm/ws-events.js",
       "require": "./dist/ws-events.js"
     }
   },
   "scripts": {
-    "build": "tsc --project tsconfig.json",
+    "build": "tsc --project tsconfig.json && tsc --project tsconfig.esm.json",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist *.tsbuildinfo",
     "dev": "tsc --watch --project tsconfig.json"
