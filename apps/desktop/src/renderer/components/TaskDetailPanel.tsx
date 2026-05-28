@@ -31,10 +31,6 @@ import {
   timeAgo,
 } from "../lib/taskDetail";
 
-const isMac =
-  typeof navigator !== "undefined" && navigator.userAgent.includes("Mac");
-const MOD = isMac ? "⌘" : "^";
-
 const PROGRESS_CELLS = 16;
 
 function slug(name: string): string {
@@ -765,25 +761,6 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
             <span className="progress-count">
               <span className="accent">{done}</span>/{total}
             </span>
-          </div>
-        </div>
-
-        {/* QUICK */}
-        <div className="detail-section">
-          <div className="detail-label">quick</div>
-          <div className="quick-list">
-            <span className="quick-key">space</span>
-            <span className="quick-desc">toggle done</span>
-            <span className="quick-key">↵</span>
-            <span className="quick-desc">open highlighted</span>
-            <span className="quick-key">{MOD}K</span>
-            <span className="quick-desc">command palette</span>
-            <span className="quick-key">{MOD}N</span>
-            <span className="quick-desc">new task</span>
-            <span className="quick-key">?</span>
-            <span className="quick-desc">all shortcuts</span>
-            <span className="quick-key">esc</span>
-            <span className="quick-desc">close panel</span>
           </div>
         </div>
       </div>

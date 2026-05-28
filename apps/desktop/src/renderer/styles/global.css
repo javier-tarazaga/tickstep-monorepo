@@ -204,20 +204,10 @@ body {
   gap: 8px;
   letter-spacing: 0.04em;
 }
-.titlebar__mark {
-  color: var(--amber);
-  animation: caretBlink 1.4s steps(1) infinite;
-}
 .titlebar__name {
   color: var(--amber);
   font-weight: 700;
   letter-spacing: 0.22em;
-}
-.titlebar__tag {
-  color: var(--ink-faint);
-}
-.titlebar__sep {
-  color: var(--ink-ghost);
 }
 .titlebar__spacer {
   flex: 1;
@@ -255,35 +245,50 @@ body {
   }
 }
 
-/* Mode badge — solid block, like a modal editor's status flag. */
-.mode-badge {
-  display: inline-flex;
+/* ══════════════════════════════════════════════════════════════
+   Status bar — global keybind hint strip along the bottom edge.
+   A single terminal status line: a leading block mark, then the
+   shortcuts that actually fire, accent key + faint gloss.
+   ══════════════════════════════════════════════════════════════ */
+.statusbar {
+  flex-shrink: 0;
+  display: flex;
   align-items: center;
-  height: 18px;
-  padding: 0 9px;
-  background: var(--amber);
-  color: var(--on-amber);
-  font-weight: 700;
+  gap: 12px;
+  height: 26px;
+  padding: 0 14px;
+  border-top: 1px solid var(--frame);
+  background: linear-gradient(var(--pane), var(--pane-raise));
+  box-shadow: inset 0 1px 0 rgba(122, 162, 194, 0.05);
   font-size: 11px;
-  letter-spacing: 0.18em;
-  border-radius: 1px;
-  transition: background 0.16s ease;
+  user-select: none;
+  -webkit-app-region: no-drag;
 }
-.mode-badge.is-insert {
-  background: var(--teal);
+.statusbar__mark {
+  color: var(--amber);
+  opacity: 0.65;
+  line-height: 1;
 }
-.mode-badge.is-pop {
-  animation: badgePop 0.22s ease-out;
+.statusbar__keys {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  overflow: hidden;
 }
-@keyframes badgePop {
-  0% {
-    transform: scale(0.86);
-    filter: brightness(1.4);
-  }
-  100% {
-    transform: scale(1);
-    filter: brightness(1);
-  }
+.key-hint {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+}
+.key-hint__k {
+  color: var(--amber);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.key-hint__d {
+  color: var(--ink-faint);
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -293,7 +298,7 @@ body {
   flex: 1;
   display: flex;
   min-height: 0;
-  padding: 10px;
+  padding: 20px 10px 10px;
   gap: 10px;
 }
 
@@ -312,10 +317,11 @@ body {
   overflow: visible;
   animation: paneBoot 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
-/* The keyboard-active pane: its top line and tag light up in accent. */
+/* The keyboard-active pane: its whole frame lights up in accent, with a soft
+   glow so the selected section reads at a glance. */
 .tui-pane.is-active {
-  border-color: var(--amber-line);
-  border-top-color: var(--amber);
+  border-color: var(--amber);
+  box-shadow: 0 0 0 1px var(--amber-glow), 0 0 12px var(--amber-glow);
 }
 @keyframes paneBoot {
   from {
@@ -407,72 +413,6 @@ body {
 .pane-head-add:hover {
   color: var(--amber);
   border-color: var(--amber);
-}
-
-/* ══════════════════════════════════════════════════════════════
-   Status bar (bottom)
-   ══════════════════════════════════════════════════════════════ */
-.statusbar {
-  flex-shrink: 0;
-  border-top: 1px solid var(--frame);
-  background: linear-gradient(var(--pane), var(--pane-raise));
-  font-size: 11px;
-  user-select: none;
-}
-
-/* keybind hint row */
-.statusbar__keys {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  padding: 6px 14px;
-  border-bottom: 1px solid var(--frame);
-  color: var(--ink-faint);
-}
-.key-hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-}
-.key-hint__k {
-  color: var(--amber);
-  font-weight: 700;
-}
-.key-hint__d {
-  color: var(--ink-faint);
-}
-
-/* status line row */
-.statusbar__line {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 5px 12px;
-  color: var(--ink-faint);
-}
-.statusbar__line .mode-badge {
-  height: 16px;
-  padding: 0 8px;
-  font-size: 10px;
-}
-.statusbar__seg {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-}
-.statusbar__seg .path {
-  color: var(--ink-dim);
-}
-.statusbar__seg .accent {
-  color: var(--amber);
-}
-.statusbar__sep {
-  color: var(--ink-ghost);
-}
-.statusbar__spacer {
-  flex: 1;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -817,10 +757,10 @@ body {
 .nav-item.is-open {
   background: var(--pane-raise);
 }
-/* keyboard cursor while pane [1] is active — a steel-blue cue ring */
+/* keyboard cursor while pane [1] is active — bright outline ring, no fill.
+   Mirrors .todo-item.focused: selection fills, the cursor only outlines. */
 .nav-item.is-kbd-focus {
-  background: var(--sel-bg);
-  box-shadow: inset 0 0 0 1px var(--amber-line);
+  box-shadow: inset 0 0 0 1px var(--amber-bright);
 }
 .nav-item.is-kbd-focus .nav-icon,
 .nav-item.is-kbd-focus .nav-item-label {
@@ -1170,6 +1110,7 @@ body {
   opacity: 0.55;
   transform: translateX(0);
 }
+/* selection = filled block + solid left bar (persistent / "open in detail") */
 .todo-item.selected {
   background: var(--sel-bg);
   border-left-color: var(--amber);
@@ -1178,9 +1119,9 @@ body {
   opacity: 1;
   transform: translateX(0);
 }
+/* keyboard cursor = bright outline ring, no fill (transient / "where I am") */
 .todo-item.focused {
-  background: var(--sel-bg);
-  box-shadow: inset 0 0 0 1px var(--amber-line);
+  box-shadow: inset 0 0 0 1px var(--amber-bright);
 }
 
 /* checkbox rendered as [ ] / [x] text */
@@ -2166,22 +2107,6 @@ body {
 }
 .progress-count .accent {
   color: var(--amber);
-}
-
-/* quick keybind block */
-.quick-list {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 4px 12px;
-  font-size: 12px;
-}
-.quick-key {
-  color: var(--amber);
-  font-weight: 700;
-  white-space: nowrap;
-}
-.quick-desc {
-  color: var(--ink-faint);
 }
 
 /* close affordance in the detail pane head */
