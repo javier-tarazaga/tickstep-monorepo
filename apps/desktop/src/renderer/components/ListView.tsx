@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTodoListsStore } from "../stores/todoListsStore";
 import { useTodosStore } from "../stores/todosStore";
 import { useNavigationStore } from "../stores/navigationStore";
+import { useCommandStore } from "../stores/commandStore";
 import TodoMeta from "./TodoMeta";
 import TodoLabels from "./TodoLabels";
 
@@ -14,17 +15,33 @@ export default function ListView({ listId }: ListViewProps) {
   const { todosByList, isLoading, fetchTodos, addTodo, removeTodo, toggleTodo } =
     useTodosStore();
   const { selectTodo, selectedTodoId } = useNavigationStore();
+  const { focusedTodoId, setFocusedTodo, pendingAddTaskListId, clearAddTaskFocus } =
+    useCommandStore();
 
   const [newTitle, setNewTitle] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const list = lists.find((l) => l.id === listId);
   const todos = todosByList[listId] ?? [];
   const incompleteTodos = todos.filter((t) => !t.completed);
   const completedTodos = todos.filter((t) => t.completed);
 
+  const openTodo = (todoId: string) => {
+    setFocusedTodo(todoId);
+    selectTodo(todoId, listId);
+  };
+
   useEffect(() => {
     fetchTodos(listId);
   }, [listId, fetchTodos]);
+
+  // Honor a Cmd+N / "new task" request, but only on the list it targeted.
+  useEffect(() => {
+    if (pendingAddTaskListId === listId) {
+      inputRef.current?.focus();
+      clearAddTaskFocus();
+    }
+  }, [pendingAddTaskListId, listId, clearAddTaskFocus]);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,6 +76,7 @@ export default function ListView({ listId }: ListViewProps) {
       {/* Add todo form */}
       <form className="add-todo-form" onSubmit={handleAdd}>
         <input
+          ref={inputRef}
           placeholder="Add a new item..."
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
@@ -78,8 +96,11 @@ export default function ListView({ listId }: ListViewProps) {
           {incompleteTodos.map((todo) => (
             <div
               key={todo.id}
-              className={`todo-item ${selectedTodoId === todo.id ? "selected" : ""}`}
-              onClick={() => selectTodo(todo.id, listId)}
+              data-todo-id={todo.id}
+              className={`todo-item ${selectedTodoId === todo.id ? "selected" : ""} ${
+                focusedTodoId === todo.id ? "focused" : ""
+              }`}
+              onClick={() => openTodo(todo.id)}
             >
               <button
                 className="todo-checkbox"
@@ -123,8 +144,11 @@ export default function ListView({ listId }: ListViewProps) {
             {completedTodos.map((todo) => (
               <div
                 key={todo.id}
-                className={`todo-item ${selectedTodoId === todo.id ? "selected" : ""}`}
-                onClick={() => selectTodo(todo.id, listId)}
+                data-todo-id={todo.id}
+                className={`todo-item ${selectedTodoId === todo.id ? "selected" : ""} ${
+                  focusedTodoId === todo.id ? "focused" : ""
+                }`}
+                onClick={() => openTodo(todo.id)}
               >
                 <button
                   className="todo-checkbox checked"

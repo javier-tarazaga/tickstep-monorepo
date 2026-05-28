@@ -2386,3 +2386,218 @@ body {
   outline: none;
   box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
+
+/* ────────────────────────────────────────────────────────
+   Command palette (Cmd+K)
+   ──────────────────────────────────────────────────────── */
+
+.command-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 14vh;
+  z-index: 9999;
+  animation: confirmOverlayIn 0.16s ease-out;
+}
+
+:root[data-theme="dark"] .command-overlay {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.command-palette {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 20px;
+  background: var(--color-menu-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+  animation: confirmCardIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.command-input {
+  width: 100%;
+  padding: 16px 18px;
+  font-size: 15px;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  outline: none;
+}
+
+.command-input::placeholder {
+  color: var(--color-text-secondary);
+}
+
+.command-results {
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.command-empty {
+  padding: 24px 12px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.command-group + .command-group {
+  margin-top: 4px;
+}
+
+.command-group-heading {
+  padding: 8px 12px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.command-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 13.5px;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+}
+
+.command-item.active {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.command-item-icon {
+  display: flex;
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+}
+
+.command-item.active .command-item-icon {
+  color: var(--color-on-primary);
+}
+
+.command-item-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-item-hint {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.command-item.active .command-item-hint {
+  color: var(--color-on-primary);
+  opacity: 0.85;
+}
+
+/* ────────────────────────────────────────────────────────
+   Keyboard shortcuts help ("?")
+   ──────────────────────────────────────────────────────── */
+
+.shortcuts-card {
+  width: 100%;
+  max-width: 420px;
+  margin: 20px;
+  padding: 24px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+  animation: confirmCardIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.shortcuts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.shortcuts-title {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.shortcuts-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.shortcuts-close:hover {
+  background: var(--color-menu-hover);
+  color: var(--color-text);
+}
+
+.shortcuts-close:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+
+.shortcuts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.shortcuts-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.shortcuts-desc {
+  font-size: 13.5px;
+  color: var(--color-text-secondary);
+}
+
+.shortcuts-keys {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.shortcuts-key {
+  min-width: 22px;
+  padding: 2px 7px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  text-align: center;
+  color: var(--color-text);
+  background: var(--color-menu-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+/* Keyboard cursor highlight on task rows (↑/↓ navigation). */
+.todo-item.focused {
+  box-shadow: inset 0 0 0 2px var(--color-primary);
+}

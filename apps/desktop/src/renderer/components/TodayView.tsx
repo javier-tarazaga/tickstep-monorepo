@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useTodoListsStore } from "../stores/todoListsStore";
 import { useTodosStore } from "../stores/todosStore";
 import { useNavigationStore } from "../stores/navigationStore";
+import { useCommandStore } from "../stores/commandStore";
 import TodoMeta from "./TodoMeta";
 import TodoLabels from "./TodoLabels";
 
@@ -9,6 +10,12 @@ export default function TodayView() {
   const { lists } = useTodoListsStore();
   const { todosByList, fetchTodos, toggleTodo } = useTodosStore();
   const { navigateToList, selectTodo, selectedTodoId } = useNavigationStore();
+  const { focusedTodoId, setFocusedTodo } = useCommandStore();
+
+  const openTodo = (todoId: string, listId: string) => {
+    setFocusedTodo(todoId);
+    selectTodo(todoId, listId);
+  };
 
   // Fetch todos for all lists on mount
   useEffect(() => {
@@ -54,8 +61,11 @@ export default function TodayView() {
           {todayTodos.map((todo) => (
             <div
               key={todo.id}
-              className={`todo-item ${selectedTodoId === todo.id ? "selected" : ""}`}
-              onClick={() => selectTodo(todo.id, todo.listId)}
+              data-todo-id={todo.id}
+              className={`todo-item ${selectedTodoId === todo.id ? "selected" : ""} ${
+                focusedTodoId === todo.id ? "focused" : ""
+              }`}
+              onClick={() => openTodo(todo.id, todo.listId)}
             >
               <button
                 className="todo-checkbox"
@@ -97,8 +107,11 @@ export default function TodayView() {
             {completedTodos.map((todo) => (
               <div
                 key={todo.id}
-                className={`todo-item ${selectedTodoId === todo.id ? "selected" : ""}`}
-                onClick={() => selectTodo(todo.id, todo.listId)}
+                data-todo-id={todo.id}
+                className={`todo-item ${selectedTodoId === todo.id ? "selected" : ""} ${
+                  focusedTodoId === todo.id ? "focused" : ""
+                }`}
+                onClick={() => openTodo(todo.id, todo.listId)}
               >
                 <button
                   className="todo-checkbox checked"
