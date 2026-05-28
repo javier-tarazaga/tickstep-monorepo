@@ -17,6 +17,7 @@ const SHORTCUTS: Shortcut[] = [
   { keys: [MOD, "T"], description: "Go to Today" },
   { keys: ["↑", "↓"], description: "Move between tasks" },
   { keys: ["Enter"], description: "Open the highlighted task" },
+  { keys: ["Space"], description: "Mark the highlighted task complete" },
   { keys: ["Esc"], description: "Close panel, palette, or dialog" },
   { keys: ["?"], description: "Show this help" },
 ];

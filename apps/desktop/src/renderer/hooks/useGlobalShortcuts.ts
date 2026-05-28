@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigationStore } from "../stores/navigationStore";
 import { useCommandStore } from "../stores/commandStore";
+import { useTodosStore } from "../stores/todosStore";
 import { getVisibleTodoOrder } from "../lib/keyboardNav";
 
 /** True when the event targets an editable field, where typing should win. */
@@ -41,6 +42,14 @@ function openFocusedTodo() {
   if (!focusedTodoId) return;
   const ref = getVisibleTodoOrder().find((t) => t.id === focusedTodoId);
   if (ref) useNavigationStore.getState().selectTodo(ref.id, ref.listId);
+}
+
+/** Toggle the completed state of the currently focused row, if any. */
+function toggleFocusedTodo() {
+  const { focusedTodoId } = useCommandStore.getState();
+  if (!focusedTodoId) return;
+  const ref = getVisibleTodoOrder().find((t) => t.id === focusedTodoId);
+  if (ref) useTodosStore.getState().toggleTodo(ref.listId, ref.id);
 }
 
 /** Cmd+N: focus the add-task input, or pick a list first when on Today. */
@@ -119,6 +128,12 @@ export function useGlobalShortcuts() {
         // with whatever element actually holds DOM focus.
         e.preventDefault();
         openFocusedTodo();
+      } else if (e.key === " " && command.focusedTodoId) {
+        // Space toggles the highlighted row's completed state, mirroring its
+        // checkbox. Gated to a live cursor so it can't steal Space (and the
+        // default page scroll only matters once a row is highlighted anyway).
+        e.preventDefault();
+        toggleFocusedTodo();
       } else if (e.key === "Escape" && command.focusedTodoId) {
         // Clear the keyboard cursor so the user can return to "nothing
         // highlighted". Defer to the detail panel's own Escape when it's open
