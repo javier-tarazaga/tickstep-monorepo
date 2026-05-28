@@ -3,8 +3,11 @@ import { useTodoListsStore } from "../stores/todoListsStore";
 import { useTodosStore } from "../stores/todosStore";
 import { useNavigationStore } from "../stores/navigationStore";
 import { useCommandStore } from "../stores/commandStore";
+import { useShareDialogStore } from "../stores/shareDialogStore";
+import { realtimeClient } from "../realtime";
 import TodoMeta from "./TodoMeta";
 import TodoLabels from "./TodoLabels";
+import { UsersIcon } from "./icons";
 
 interface ListViewProps {
   listId: string;
@@ -15,6 +18,7 @@ export default function ListView({ listId }: ListViewProps) {
   const { todosByList, isLoading, fetchTodos, addTodo, removeTodo, toggleTodo } =
     useTodosStore();
   const { selectTodo, selectedTodoId } = useNavigationStore();
+  const openShareDialog = useShareDialogStore((s) => s.open);
   const { focusedTodoId, setFocusedTodo, pendingAddTaskListId, clearAddTaskFocus } =
     useCommandStore();
 
@@ -34,6 +38,12 @@ export default function ListView({ listId }: ListViewProps) {
   useEffect(() => {
     fetchTodos(listId);
   }, [listId, fetchTodos]);
+
+  // Subscribe to live todo updates for this list while it's open.
+  useEffect(() => {
+    realtimeClient.joinList(listId);
+    return () => realtimeClient.leaveList(listId);
+  }, [listId]);
 
   // Honor a Cmd+N / "new task" request, but only on the list it targeted.
   useEffect(() => {
@@ -71,6 +81,16 @@ export default function ListView({ listId }: ListViewProps) {
           )}
           {list.name}
         </h2>
+        <button
+          className={`list-share-btn ${list.isShared ? "is-shared" : ""}`}
+          onClick={() => openShareDialog(listId)}
+          title={list.isShared ? "Manage sharing" : "Share list"}
+        >
+          <UsersIcon size={15} />
+          <span>
+            {list.isShared ? `Shared · ${list.members.length}` : "Share"}
+          </span>
+        </button>
       </div>
 
       {/* Add todo form */}

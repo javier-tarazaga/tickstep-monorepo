@@ -4,7 +4,8 @@ import { TokenRefreshManager } from "./services/tokenRefreshManager";
 
 // Baked in at build time. Pass VITE_API_BASE_URL when packaging the app to
 // point it at the deployed API; falls back to the local dev server.
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
 export const apiClient = new TodoApiClient({
   baseUrl: API_BASE_URL,

@@ -1,4 +1,5 @@
 import type {
+  AddMemberDto,
   ApiResponse,
   AuthResponse,
   AuthTokens,
@@ -15,6 +16,7 @@ import type {
   Todo,
   TodoFilters,
   TodoList,
+  TodoListMember,
   UpdateLabelDto,
   UpdateTodoDto,
   UpdateTodoListDto,
@@ -145,6 +147,42 @@ export class TodoApiClient {
 
   async deleteTodoList(id: string): Promise<ApiResponse<void>> {
     return this.request(`/todo-lists/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  // ─── List Members (sharing) ────────────────────────────
+
+  async getListMembers(
+    listId: string,
+  ): Promise<ApiResponse<TodoListMember[]>> {
+    return this.request(`/todo-lists/${listId}/members`);
+  }
+
+  /** Invite an existing user by email. Returns the updated list. */
+  async addListMember(
+    listId: string,
+    dto: AddMemberDto,
+  ): Promise<ApiResponse<TodoList>> {
+    return this.request(`/todo-lists/${listId}/members`, {
+      method: "POST",
+      body: JSON.stringify(dto),
+    });
+  }
+
+  /** Remove a member by user id. Pass "me" to leave the list yourself. */
+  async removeListMember(
+    listId: string,
+    userId: string,
+  ): Promise<ApiResponse<void>> {
+    return this.request(`/todo-lists/${listId}/members/${userId}`, {
+      method: "DELETE",
+    });
+  }
+
+  /** Leave a shared list you're a member of (sugar for removing yourself). */
+  async leaveList(listId: string): Promise<ApiResponse<void>> {
+    return this.request(`/todo-lists/${listId}/members/me`, {
       method: "DELETE",
     });
   }

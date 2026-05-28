@@ -15,6 +15,6 @@ import { UserRepository } from "./user.repository";
     // Apply AuthGuard to every route in the app. Routes opt out with @Public().
     { provide: APP_GUARD, useClass: AuthGuard },
   ],
-  exports: [AuthService],
+  exports: [AuthService, UserRepository],
 })
 export class AuthModule {}

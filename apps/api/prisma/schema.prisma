@@ -20,9 +20,10 @@ model User {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  todoLists     TodoList[]
-  sidebarLayout SidebarLayout?
-  labels        Label[]
+  todoLists       TodoList[]
+  sidebarLayout   SidebarLayout?
+  labels          Label[]
+  listMemberships TodoListMember[]
 
   @@map("users")
 }
@@ -35,11 +36,30 @@ model TodoList {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  todos Todo[]
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  todos   Todo[]
+  members TodoListMember[]
 
   @@index([userId], map: "idx_todo_lists_user_id")
   @@map("todo_lists")
+}
+
+// A collaborator on a shared list. The list's `userId` remains the canonical
+// owner (never appears here); rows here are the invited members. `role` is
+// always "member" today — it exists so future roles (editor/viewer) are a
+// data change, not a migration.
+model TodoListMember {
+  listId    String   @map("list_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  role      String   @default("member") @db.VarChar(32)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  todoList TodoList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([listId, userId])
+  @@index([userId], map: "idx_todo_list_members_user_id")
+  @@map("todo_list_members")
 }
 
 model Todo {

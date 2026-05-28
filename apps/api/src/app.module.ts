@@ -6,6 +6,7 @@ import { TodoListsModule } from "./todo-lists/todo-lists.module";
 import { TodosModule } from "./todos/todos.module";
 import { LabelsModule } from "./labels/labels.module";
 import { SidebarLayoutModule } from "./sidebar-layout/sidebar-layout.module";
+import { RealtimeModule } from "./realtime/realtime.module";
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { SidebarLayoutModule } from "./sidebar-layout/sidebar-layout.module";
     TodosModule,
     LabelsModule,
     SidebarLayoutModule,
+    RealtimeModule,
   ],
 })
 export class AppModule {}

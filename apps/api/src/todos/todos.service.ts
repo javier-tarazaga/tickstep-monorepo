@@ -7,11 +7,15 @@ import type {
   TodoPriority,
   UpdateTodoDto,
 } from "@tickstep/shared-types";
+import { RealtimeService } from "../realtime/realtime.service";
 import { TodoRepository, type TodoRow } from "./todo.repository";
 
 @Injectable()
 export class TodosService {
-  constructor(private readonly todoRepository: TodoRepository) {}
+  constructor(
+    private readonly todoRepository: TodoRepository,
+    private readonly realtime: RealtimeService,
+  ) {}
 
   async findAll(
     todoListId: string,
@@ -56,7 +60,9 @@ export class TodosService {
       dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
       priority: dto.priority ?? null,
     });
-    return this.toTodo(row);
+    const todo = this.toTodo(row);
+    this.realtime.todoCreated(todoListId, todo);
+    return todo;
   }
 
   async update(
@@ -79,7 +85,9 @@ export class TodosService {
     if (!row) {
       throw new NotFoundException(`Todo with id "${id}" not found`);
     }
-    return this.toTodo(row);
+    const todo = this.toTodo(row);
+    this.realtime.todoUpdated(todoListId, todo);
+    return todo;
   }
 
   async remove(id: string, todoListId: string): Promise<void> {
@@ -87,6 +95,7 @@ export class TodosService {
     if (!deleted) {
       throw new NotFoundException(`Todo with id "${id}" not found`);
     }
+    this.realtime.todoDeleted(todoListId, id);
   }
 
   async toggle(id: string, todoListId: string): Promise<Todo> {
@@ -94,7 +103,9 @@ export class TodosService {
     if (!row) {
       throw new NotFoundException(`Todo with id "${id}" not found`);
     }
-    return this.toTodo(row);
+    const todo = this.toTodo(row);
+    this.realtime.todoUpdated(todoListId, todo);
+    return todo;
   }
 
   async addLabel(
@@ -105,7 +116,9 @@ export class TodosService {
     // Ensure the todo exists and is owned by this list before mutating the join.
     await this.findOne(id, todoListId);
     await this.todoRepository.addLabel(id, labelId);
-    return this.findOne(id, todoListId);
+    const todo = await this.findOne(id, todoListId);
+    this.realtime.todoUpdated(todoListId, todo);
+    return todo;
   }
 
   async removeLabel(
@@ -115,7 +128,9 @@ export class TodosService {
   ): Promise<Todo> {
     await this.findOne(id, todoListId);
     await this.todoRepository.removeLabel(id, labelId);
-    return this.findOne(id, todoListId);
+    const todo = await this.findOne(id, todoListId);
+    this.realtime.todoUpdated(todoListId, todo);
+    return todo;
   }
 
   private toTodo(row: TodoRow): Todo {

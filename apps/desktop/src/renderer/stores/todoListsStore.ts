@@ -6,6 +6,7 @@ import type {
   UpdateTodoListDto,
 } from "@tickstep/shared-types";
 import { apiClient } from "../api";
+import { useAuthStore } from "./authStore";
 
 /** A "section" is a named grouping of lists */
 export interface ListSection {
@@ -60,6 +61,29 @@ interface TodoListsState {
   ) => void;
   /** Set full layout (used during complex DnD operations) */
   setLayout: (sections: ListSection[], unsectionedListIds: string[]) => void;
+
+  /* ── Sharing ─────────────────────────────────────────── */
+  /** Invite an existing user by email. Resolves to an error message, or null
+   *  on success. */
+  addMember: (listId: string, email: string) => Promise<string | null>;
+  /** Remove a collaborator from a list you participate in. */
+  removeMember: (listId: string, userId: string) => Promise<void>;
+  /** Leave a shared list you're a member of. */
+  leaveList: (listId: string) => Promise<void>;
+
+  /* ── Realtime appliers (called by the socket layer, not the UI) ───── */
+  /** Upsert a list pushed from the server (rename, emoji, membership change,
+   *  or a list freshly shared with you). */
+  applyRemoteListUpserted: (list: TodoList) => void;
+  /** Drop a list that was deleted, or that you were removed from. */
+  applyRemoteListDeleted: (listId: string) => void;
+}
+
+/** Return a copy of the list with the given member removed and counts fixed. */
+function withoutMember(list: TodoList, userId: string): TodoList {
+  const members = list.members.filter((m) => m.userId !== userId);
+  const memberCount = members.filter((m) => m.role !== "owner").length;
+  return { ...list, members, memberCount, isShared: memberCount > 0 };
 }
 
 const SECTIONS_STORAGE_KEY = "tickstep-sections";
@@ -148,7 +172,7 @@ function arrayMove<T>(arr: T[], from: number, to: number): T[] {
   return result;
 }
 
-export const useTodoListsStore = create<TodoListsState>((set) => ({
+export const useTodoListsStore = create<TodoListsState>((set, get) => ({
   lists: [],
   sections: loadSections(),
   unsectionedListIds: loadUnsectionedListIds(),
@@ -445,5 +469,99 @@ export const useTodoListsStore = create<TodoListsState>((set) => ({
   setLayout: (sections: ListSection[], unsectionedListIds: string[]) => {
     persistLayout(sections, unsectionedListIds);
     set({ sections, unsectionedListIds });
+  },
+
+  addMember: async (listId: string, email: string) => {
+    try {
+      const response = await apiClient.addListMember(listId, { email });
+      const updated = response.data;
+      set((state) => ({
+        lists: state.lists.map((l) => (l.id === listId ? updated : l)),
+      }));
+      return null;
+    } catch (err) {
+      return err instanceof Error ? err.message : "Failed to add member";
+    }
+  },
+
+  removeMember: async (listId: string, userId: string) => {
+    const previous = get().lists;
+    // Optimistic: drop the member immediately, roll back on failure.
+    set((state) => ({
+      error: null,
+      lists: state.lists.map((l) =>
+        l.id === listId ? withoutMember(l, userId) : l,
+      ),
+    }));
+    try {
+      await apiClient.removeListMember(listId, userId);
+    } catch (err) {
+      set({
+        lists: previous,
+        error: err instanceof Error ? err.message : "Failed to remove member",
+      });
+    }
+  },
+
+  leaveList: async (listId: string) => {
+    set({ error: null });
+    try {
+      await apiClient.leaveList(listId);
+      set((state) => {
+        const lists = state.lists.filter((l) => l.id !== listId);
+        const sections = state.sections.map((s) => ({
+          ...s,
+          listIds: s.listIds.filter((lid) => lid !== listId),
+        }));
+        const unsectionedListIds = state.unsectionedListIds.filter(
+          (lid) => lid !== listId,
+        );
+        persistLayout(sections, unsectionedListIds);
+        return { lists, sections, unsectionedListIds };
+      });
+    } catch (err) {
+      set({
+        error: err instanceof Error ? err.message : "Failed to leave list",
+      });
+    }
+  },
+
+  applyRemoteListUpserted: (incoming: TodoList) => {
+    // `isOwner` is per-viewer; the server can't know ours, so derive it here.
+    const myId = useAuthStore.getState().user?.id;
+    const list: TodoList = { ...incoming, isOwner: incoming.userId === myId };
+    set((state) => {
+      const exists = state.lists.some((l) => l.id === list.id);
+      const lists = exists
+        ? state.lists.map((l) => (l.id === list.id ? list : l))
+        : [...state.lists, list];
+
+      // A brand-new list you OWN (rare via socket) needs a sidebar slot.
+      // Shared-with-you lists render in their own group, so no layout entry.
+      const known =
+        state.unsectionedListIds.includes(list.id) ||
+        state.sections.some((s) => s.listIds.includes(list.id));
+      if (!exists && list.isOwner && !known) {
+        const unsectionedListIds = [...state.unsectionedListIds, list.id];
+        persistLayout(state.sections, unsectionedListIds);
+        return { lists, unsectionedListIds };
+      }
+      return { lists };
+    });
+  },
+
+  applyRemoteListDeleted: (listId: string) => {
+    set((state) => {
+      const lists = state.lists.filter((l) => l.id !== listId);
+      const sections = state.sections.map((s) => ({
+        ...s,
+        listIds: s.listIds.filter((lid) => lid !== listId),
+      }));
+      const unsectionedListIds = state.unsectionedListIds.filter(
+        (lid) => lid !== listId,
+      );
+      persistLayout(sections, unsectionedListIds);
+      return { lists, sections, unsectionedListIds };
+    });
   },
 }));

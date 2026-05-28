@@ -28,9 +28,11 @@ import {
   usePanelStore,
 } from "../stores/panelStore";
 import type { ListSection } from "../stores/todoListsStore";
+import { useShareDialogStore } from "../stores/shareDialogStore";
 import ConfirmDialog from "./ConfirmDialog";
 import ListContextMenu from "./ListContextMenu";
 import EmojiPickerPopover from "./EmojiPickerPopover";
+import { UsersIcon } from "./icons";
 
 /* ────────────────────────────────────────────────────────
    Types
@@ -48,6 +50,8 @@ interface SidebarList {
   id: string;
   name: string;
   emoji?: string | null;
+  /** True when the list has collaborators (shows a people badge). */
+  isShared?: boolean;
 }
 
 /**
@@ -519,8 +523,57 @@ function SortableListItem({
           >
             {list.name}
           </span>
+          {list.isShared && (
+            <span className="nav-item-shared" title="Shared with others">
+              <UsersIcon size={12} />
+            </span>
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────
+   Shared-with-me list row (static — not part of personal DnD)
+   ──────────────────────────────────────────────────────── */
+
+function SharedListRow({
+  list,
+  isActive,
+  isOpen,
+  onSelect,
+  onContextMenu,
+}: {
+  list: SidebarList;
+  isActive: boolean;
+  isOpen: boolean;
+  onSelect: () => void;
+  onContextMenu: (e: React.MouseEvent) => void;
+}) {
+  return (
+    <div className="nav-item-wrapper shared-row">
+      <div
+        className={`nav-item ${isActive ? "active" : ""} ${isOpen ? "is-open" : ""}`}
+        role="button"
+        tabIndex={0}
+        onClick={onSelect}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onSelect();
+          }
+        }}
+        onContextMenu={onContextMenu}
+      >
+        <span className="nav-icon-btn" aria-hidden="true">
+          <ListIconGlyph emoji={list.emoji} />
+        </span>
+        <span className="nav-item-label">{list.name}</span>
+        <span className="nav-item-shared" title="Shared with you">
+          <UsersIcon size={12} />
+        </span>
+      </div>
     </div>
   );
 }
@@ -630,9 +683,11 @@ export default function Sidebar() {
     moveListToSection,
     moveListToUnsectioned,
     moveListBetweenSections,
+    leaveList,
   } = useTodoListsStore();
   const { currentView, selectedListId, navigateToToday, navigateToList } =
     useNavigationStore();
+  const openShareDialog = useShareDialogStore((s) => s.open);
 
   /* Per-list interaction state (one at a time, lifted out of the rows). */
   const [menu, setMenu] = useState<{
@@ -685,10 +740,23 @@ export default function Sidebar() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // The personal layout (sections + unsectioned + DnD) only covers lists you
+  // own. Lists shared with you live in their own non-draggable group. The
+  // owned filter treats an unset isOwner as owned so a list can never vanish
+  // from both groups or appear in both during a brief load window.
+  const ownedLists = useMemo(
+    () => lists.filter((l) => l.isOwner !== false),
+    [lists],
+  );
+  const sharedLists = useMemo(
+    () => lists.filter((l) => l.isOwner === false),
+    [lists],
+  );
+
   const sectionListIds = new Set(sections.flatMap((s) => s.listIds));
 
   const orderedUnsectionedLists = useMemo(() => {
-    const allUnsectioned = lists.filter((l) => !sectionListIds.has(l.id));
+    const allUnsectioned = ownedLists.filter((l) => !sectionListIds.has(l.id));
     const ordered: typeof allUnsectioned = [];
     const remaining = new Map(allUnsectioned.map((l) => [l.id, l]));
 
@@ -703,7 +771,12 @@ export default function Sidebar() {
       ordered.push(list);
     }
     return ordered;
-  }, [lists, sectionListIds, unsectionedListIds]);
+  }, [ownedLists, sectionListIds, unsectionedListIds]);
+
+  const orderedSharedLists = useMemo(
+    () => [...sharedLists].sort((a, b) => a.name.localeCompare(b.name)),
+    [sharedLists],
+  );
 
   const sectionSortableIds = sections.map((s) => `section:${s.id}`);
   const unsectionedSortableIds = orderedUnsectionedLists.map(
@@ -791,6 +864,25 @@ export default function Sidebar() {
     // Read the live selection rather than the value closed over at open time.
     if (useNavigationStore.getState().selectedListId === id) navigateToToday();
   };
+
+  const openShareFromMenu = () => {
+    if (!menu) return;
+    const id = menu.listId;
+    setMenu(null);
+    openShareDialog(id);
+  };
+
+  const handleLeaveFromMenu = async () => {
+    if (!menu) return;
+    const id = menu.listId;
+    setMenu(null);
+    await leaveList(id);
+    if (useNavigationStore.getState().selectedListId === id) navigateToToday();
+  };
+
+  const menuList = menu
+    ? lists.find((l) => l.id === menu.listId) ?? null
+    : null;
 
   const listController: ListItemController = {
     selectedListId,
@@ -1080,7 +1172,7 @@ export default function Sidebar() {
               <SortableSection
                 key={section.id}
                 section={section}
-                lists={lists}
+                lists={ownedLists}
                 controller={listController}
                 onToggle={() => toggleSection(section.id)}
                 onRemove={() => removeSection(section.id)}
@@ -1112,6 +1204,31 @@ export default function Sidebar() {
             {renderDragOverlay()}
           </DragOverlay>
         </DndContext>
+
+        {/* Shared with me — lists other people gave you access to */}
+        {orderedSharedLists.length > 0 && (
+          <>
+            <div className="nav-section-header shared-section-header">
+              <span>Shared with me</span>
+            </div>
+            <div className="shared-lists">
+              {orderedSharedLists.map((list) => (
+                <SharedListRow
+                  key={list.id}
+                  list={list}
+                  isActive={selectedListId === list.id}
+                  isOpen={menu?.listId === list.id}
+                  onSelect={() => navigateToList(list.id)}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setMenu({ listId: list.id, x: e.clientX, y: e.clientY });
+                  }}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="sidebar-footer">
@@ -1139,17 +1256,22 @@ export default function Sidebar() {
         </button>
       </div>
 
-      {/* Right-click menu for a list row */}
-      {menu && (
+      {/* Right-click menu for a list row. Owned lists get full controls;
+          lists shared with you get Share + Leave. */}
+      {menu && menuList && (
         <ListContextMenu
           x={menu.x}
           y={menu.y}
-          onRename={() => startRename(menu.listId)}
-          onChangeEmoji={() =>
-            openEmojiAt(menu.listId, { x: menu.x, y: menu.y })
-          }
-          onDelete={requestDeleteFromMenu}
+          onShare={openShareFromMenu}
           onClose={() => setMenu(null)}
+          {...(menuList.isOwner
+            ? {
+                onRename: () => startRename(menu.listId),
+                onChangeEmoji: () =>
+                  openEmojiAt(menu.listId, { x: menu.x, y: menu.y }),
+                onDelete: requestDeleteFromMenu,
+              }
+            : { onLeave: handleLeaveFromMenu })}
         />
       )}
 

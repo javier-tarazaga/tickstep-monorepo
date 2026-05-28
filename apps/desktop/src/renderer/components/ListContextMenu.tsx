@@ -1,20 +1,27 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { PencilIcon, SmileIcon, TrashIcon } from "./icons";
+import { LeaveIcon, PencilIcon, SmileIcon, TrashIcon, UsersIcon } from "./icons";
 
 interface ListContextMenuProps {
   /** Viewport coordinates of the right-click. */
   x: number;
   y: number;
-  onRename: () => void;
-  onChangeEmoji: () => void;
-  onDelete: () => void;
+  /** Owner-only actions. Omit for lists the user only collaborates on. */
+  onRename?: () => void;
+  onChangeEmoji?: () => void;
+  onDelete?: () => void;
+  /** Available to any participant. */
+  onShare?: () => void;
+  /** Member-only: leave a list shared with you. */
+  onLeave?: () => void;
   onClose: () => void;
 }
 
 /**
- * A floating menu anchored at the cursor. It clamps itself inside the viewport
- * after mount so it never spills off-screen near an edge, and closes on Escape,
- * outside click, or a fresh right-click.
+ * A floating menu anchored at the cursor. Items render based on which handlers
+ * are supplied, so the same component serves owned lists (rename / emoji /
+ * share / delete) and shared lists (share / leave). It clamps itself inside the
+ * viewport after mount and closes on Escape, outside click, or a fresh
+ * right-click.
  */
 export default function ListContextMenu({
   x,
@@ -22,6 +29,8 @@ export default function ListContextMenu({
   onRename,
   onChangeEmoji,
   onDelete,
+  onShare,
+  onLeave,
   onClose,
 }: ListContextMenuProps) {
   const ref = useRef<HTMLDivElement>(null);
@@ -49,6 +58,8 @@ export default function ListContextMenu({
   }, [onClose]);
 
   const stop = (e: React.MouseEvent) => e.stopPropagation();
+  const hasEditItems = onRename || onChangeEmoji;
+  const hasDestructive = onDelete || onLeave;
 
   return (
     <>
@@ -67,33 +78,66 @@ export default function ListContextMenu({
         role="menu"
         onClick={stop}
       >
-        <button className="list-context-item" role="menuitem" onClick={onRename}>
-          <span className="list-context-icon">
-            <PencilIcon size={14} />
-          </span>
-          Rename
-        </button>
-        <button
-          className="list-context-item"
-          role="menuitem"
-          onClick={onChangeEmoji}
-        >
-          <span className="list-context-icon">
-            <SmileIcon size={14} />
-          </span>
-          Change emoji
-        </button>
-        <div className="list-context-divider" />
-        <button
-          className="list-context-item danger"
-          role="menuitem"
-          onClick={onDelete}
-        >
-          <span className="list-context-icon">
-            <TrashIcon size={14} />
-          </span>
-          Delete list
-        </button>
+        {onRename && (
+          <button className="list-context-item" role="menuitem" onClick={onRename}>
+            <span className="list-context-icon">
+              <PencilIcon size={14} />
+            </span>
+            Rename
+          </button>
+        )}
+        {onChangeEmoji && (
+          <button
+            className="list-context-item"
+            role="menuitem"
+            onClick={onChangeEmoji}
+          >
+            <span className="list-context-icon">
+              <SmileIcon size={14} />
+            </span>
+            Change emoji
+          </button>
+        )}
+        {onShare && (
+          <>
+            {hasEditItems && <div className="list-context-divider" />}
+            <button
+              className="list-context-item"
+              role="menuitem"
+              onClick={onShare}
+            >
+              <span className="list-context-icon">
+                <UsersIcon size={14} />
+              </span>
+              Share…
+            </button>
+          </>
+        )}
+        {hasDestructive && <div className="list-context-divider" />}
+        {onLeave && (
+          <button
+            className="list-context-item danger"
+            role="menuitem"
+            onClick={onLeave}
+          >
+            <span className="list-context-icon">
+              <LeaveIcon size={14} />
+            </span>
+            Leave list
+          </button>
+        )}
+        {onDelete && (
+          <button
+            className="list-context-item danger"
+            role="menuitem"
+            onClick={onDelete}
+          >
+            <span className="list-context-icon">
+              <TrashIcon size={14} />
+            </span>
+            Delete list
+          </button>
+        )}
       </div>
     </>
   );

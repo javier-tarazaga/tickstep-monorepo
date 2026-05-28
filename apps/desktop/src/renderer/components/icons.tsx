@@ -131,6 +131,26 @@ export function TrashIcon({ size = 16 }: IconProps) {
   );
 }
 
+/** Two people — sharing / collaborators. */
+export function UsersIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...svgProps(size)}>
+      <circle cx="6" cy="5.5" r="2.25" />
+      <path d="M2.5 13c0-2 1.6-3.4 3.5-3.4s3.5 1.4 3.5 3.4" />
+      <path d="M10.5 3.6a2.25 2.25 0 0 1 0 4.3M11 9.8c1.6.3 2.8 1.6 2.8 3.2" />
+    </svg>
+  );
+}
+
+/** Door / arrow out — leave a shared list. */
+export function LeaveIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...svgProps(size)}>
+      <path d="M6 14H3.5A1.5 1.5 0 0 1 2 12.5v-9A1.5 1.5 0 0 1 3.5 2H6M10.5 11 14 8l-3.5-3M14 8H6" />
+    </svg>
+  );
+}
+
 /** Smiley — pick / change an emoji icon. */
 export function SmileIcon({ size = 16 }: IconProps) {
   return (

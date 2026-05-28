@@ -34,7 +34,28 @@ interface TodosState {
   applyLabelUpdate: (label: Label) => void;
   /** Strip a deleted catalogue label from every loaded todo. */
   applyLabelRemoval: (labelId: string) => void;
+
+  /** A collaborator created a todo (live). Appended only if the list is
+   *  loaded and we don't already have it (the actor dedupes their own echo). */
+  applyRemoteTodoCreated: (listId: string, todo: Todo) => void;
+  /** A collaborator edited/toggled/(un)labelled a todo (live). */
+  applyRemoteTodoUpdated: (listId: string, todo: Todo) => void;
+  /** A collaborator deleted a todo (live). */
+  applyRemoteTodoDeleted: (listId: string, todoId: string) => void;
 }
+
+/** Keep the first occurrence of each todo id, dropping later duplicates. */
+function dedupeById(todos: Todo[]): Todo[] {
+  const seen = new Set<string>();
+  return todos.filter((t) => (seen.has(t.id) ? false : (seen.add(t.id), true)));
+}
+
+/**
+ * Todos with a local edit currently in flight. A remote `todo:updated` for one
+ * of these would clobber the user's optimistic edit with the pre-edit server
+ * value, so we skip it — the edit's own HTTP response reconciles authoritatively.
+ */
+const inFlightEdits = new Set<string>();
 
 /**
  * Per-list request token ("epoch"). A `fetchTodos` records the current token
@@ -109,11 +130,15 @@ export const useTodosStore = create<TodosState>((set, get) => ({
 
     try {
       const response = await apiClient.createTodo(listId, { title });
+      // Swap the placeholder for the server todo. Dedupe in case a live
+      // `todo:created` echo already appended the real row before this resolved.
       set((state) => ({
         todosByList: {
           ...state.todosByList,
-          [listId]: (state.todosByList[listId] ?? []).map((t) =>
-            t.id === tempId ? response.data : t,
+          [listId]: dedupeById(
+            (state.todosByList[listId] ?? []).map((t) =>
+              t.id === tempId ? response.data : t,
+            ),
           ),
         },
       }));
@@ -206,6 +231,8 @@ export const useTodosStore = create<TodosState>((set, get) => ({
   updateTodo: async (listId, todoId, dto) => {
     // Invalidate any in-flight fetch so it can't overwrite this optimistic edit.
     bumpLoadToken(listId);
+    // Shield this todo from remote `todo:updated` echoes until the edit settles.
+    inFlightEdits.add(todoId);
     // Optimistic merge — these fields are low-stakes.
     set((state) => ({
       todosByList: {
@@ -231,6 +258,8 @@ export const useTodosStore = create<TodosState>((set, get) => ({
       set({
         error: err instanceof Error ? err.message : "Failed to update todo",
       });
+    } finally {
+      inFlightEdits.delete(todoId);
     }
   },
 
@@ -350,4 +379,43 @@ export const useTodosStore = create<TodosState>((set, get) => ({
         ]),
       ),
     })),
+
+  applyRemoteTodoCreated: (listId, todo) =>
+    set((state) => {
+      const current = state.todosByList[listId];
+      // Not loaded → ignore; it'll be fetched when the list is opened.
+      if (!current || current.some((t) => t.id === todo.id)) return state;
+      return {
+        todosByList: { ...state.todosByList, [listId]: [...current, todo] },
+      };
+    }),
+
+  applyRemoteTodoUpdated: (listId, todo) =>
+    set((state) => {
+      const current = state.todosByList[listId];
+      if (!current) return state;
+      // Don't overwrite a local edit that's mid-flight; its own response wins.
+      if (inFlightEdits.has(todo.id)) return state;
+      const exists = current.some((t) => t.id === todo.id);
+      return {
+        todosByList: {
+          ...state.todosByList,
+          [listId]: exists
+            ? current.map((t) => (t.id === todo.id ? todo : t))
+            : [...current, todo],
+        },
+      };
+    }),
+
+  applyRemoteTodoDeleted: (listId, todoId) =>
+    set((state) => {
+      const current = state.todosByList[listId];
+      if (!current) return state;
+      return {
+        todosByList: {
+          ...state.todosByList,
+          [listId]: current.filter((t) => t.id !== todoId),
+        },
+      };
+    }),
 }));

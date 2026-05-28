@@ -30,6 +30,16 @@ CREATE TABLE IF NOT EXISTS todos (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Todo list members table (collaborators on a shared list; the list's user_id
+-- remains the owner and never appears here)
+CREATE TABLE IF NOT EXISTS todo_list_members (
+  list_id UUID NOT NULL REFERENCES todo_lists(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role VARCHAR(32) NOT NULL DEFAULT 'member',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (list_id, user_id)
+);
+
 -- Sidebar layout table (stores section/list ordering for cross-device sync)
 CREATE TABLE IF NOT EXISTS sidebar_layouts (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -44,3 +54,4 @@ CREATE INDEX IF NOT EXISTS idx_todo_lists_user_id ON todo_lists(user_id);
 CREATE INDEX IF NOT EXISTS idx_todos_todo_list_id ON todos(todo_list_id);
 CREATE INDEX IF NOT EXISTS idx_todos_completed ON todos(completed);
 CREATE INDEX IF NOT EXISTS idx_sidebar_layouts_user_id ON sidebar_layouts(user_id);
+CREATE INDEX IF NOT EXISTS idx_todo_list_members_user_id ON todo_list_members(user_id);

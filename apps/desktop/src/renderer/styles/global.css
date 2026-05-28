@@ -2601,3 +2601,236 @@ body {
 .todo-item.focused {
   box-shadow: inset 0 0 0 2px var(--color-primary);
 }
+
+/* ── Sharing ─────────────────────────────────────────────── */
+
+/* Small people badge on shared list rows in the sidebar. */
+.nav-item-shared {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  padding-left: 6px;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.shared-row .nav-item {
+  cursor: pointer;
+}
+
+.shared-section-header {
+  margin-top: 4px;
+}
+
+/* "Share" button in the list header. */
+.list-share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.list-share-btn:hover {
+  background: var(--color-menu-hover);
+  color: var(--color-text);
+}
+
+.list-share-btn.is-shared {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+/* Share dialog (built on .confirm-overlay / .confirm-card). */
+.share-dialog {
+  position: relative;
+  max-width: 440px;
+}
+
+.share-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: inline-flex;
+  padding: 4px;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.share-close:hover {
+  background: var(--color-menu-hover);
+  color: var(--color-text);
+}
+
+.share-invite {
+  display: flex;
+  gap: 8px;
+  margin: 18px 0 8px;
+}
+
+.share-invite input {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background: var(--color-input-bg, var(--color-surface));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.share-invite input:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+
+.share-invite button {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.12s, opacity 0.12s;
+}
+
+.share-invite button:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.share-invite button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.share-error {
+  font-size: 12.5px;
+  color: var(--color-danger);
+  margin-bottom: 8px;
+}
+
+.share-member-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  margin: 14px 0 8px;
+}
+
+.share-member-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.share-member {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+}
+
+.share-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-avatar-bg);
+  color: var(--color-avatar-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.share-member-email {
+  flex: 1;
+  font-size: 13px;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.share-you {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.share-role {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.share-remove {
+  display: inline-flex;
+  padding: 4px;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.share-remove:hover {
+  background: var(--color-menu-hover);
+  color: var(--color-danger);
+}
+
+.share-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.share-leave {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  color: var(--color-danger);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.share-leave:hover {
+  background: var(--color-menu-hover);
+  border-color: var(--color-danger);
+}
+
+.share-done {
+  margin-left: auto;
+}
