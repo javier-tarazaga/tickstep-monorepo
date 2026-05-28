@@ -119,6 +119,13 @@ export function useGlobalShortcuts() {
         // with whatever element actually holds DOM focus.
         e.preventDefault();
         openFocusedTodo();
+      } else if (e.key === "Escape" && command.focusedTodoId) {
+        // Clear the keyboard cursor so the user can return to "nothing
+        // highlighted". Defer to the detail panel's own Escape when it's open
+        // (that one closes the panel); a later Escape then clears the cursor.
+        if (useNavigationStore.getState().selectedTodoId) return;
+        e.preventDefault();
+        command.setFocusedTodo(null);
       }
     };
 
