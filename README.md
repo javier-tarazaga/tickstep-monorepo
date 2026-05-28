@@ -64,3 +64,8 @@ tickstep-monorepo/
 | `pnpm lint` | Lint all code |
 | `pnpm typecheck` | Type-check all packages |
 | `pnpm clean` | Clean build artifacts |
+
+## Deployment
+
+To share TickStep with others, deploy the API to Cloud Run and ship the desktop
+app as a `.dmg`. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
