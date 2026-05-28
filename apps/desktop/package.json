@@ -8,7 +8,7 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
-    "package": "electron-builder --mac --config",
+    "package": "electron-builder --mac -c.electronVersion=$(node -p \"require('electron/package.json').version\")",
     "clean": "rm -rf dist out *.tsbuildinfo"
   },
   "dependencies": {
