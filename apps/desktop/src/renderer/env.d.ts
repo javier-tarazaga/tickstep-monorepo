@@ -24,6 +24,10 @@ interface ElectronAPI {
 }
 
 declare global {
+  interface ImportMetaEnv {
+    readonly VITE_API_BASE_URL?: string;
+  }
+
   interface Window {
     electronAPI: ElectronAPI;
   }

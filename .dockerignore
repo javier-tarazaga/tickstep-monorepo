@@ -1,0 +1,32 @@
+# Keep secrets and machine-local artifacts out of the build context / image.
+
+# Dependencies & build outputs (the image installs/builds fresh)
+**/node_modules
+**/dist
+**/.turbo
+**/*.tsbuildinfo
+
+# Secrets — never bake .env into the image (pass env vars at deploy time).
+# .env.example is intentionally NOT matched and stays in the context.
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Git / IDE / OS noise
+.git
+.gitignore
+.idea
+.vscode
+**/.DS_Store
+**/*.log
+
+# Desktop (Electron) build artifacts
+apps/desktop/out
+apps/desktop/release
+
+# Mobile (Expo / native) build artifacts
+apps/mobile/.expo
+apps/mobile/ios/Pods
+apps/mobile/android/.gradle
+apps/mobile/android/app/build
+apps/mobile/android/build

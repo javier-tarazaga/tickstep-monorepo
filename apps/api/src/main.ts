@@ -11,7 +11,8 @@ async function bootstrap() {
   });
 
   const port = process.env["PORT"] ?? 3000;
-  await app.listen(port);
+  // Bind to all interfaces so containerized platforms (e.g. Cloud Run) can reach it.
+  await app.listen(port, "0.0.0.0");
   console.log(`🚀 API server running on http://localhost:${port}`);
 }
 
