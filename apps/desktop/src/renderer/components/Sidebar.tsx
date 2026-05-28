@@ -20,6 +20,8 @@ import { useAuthStore } from "../stores/authStore";
 import { useTodoListsStore } from "../stores/todoListsStore";
 import { useNavigationStore } from "../stores/navigationStore";
 import { useTodosStore } from "../stores/todosStore";
+import { useUiStore } from "../stores/uiStore";
+import { useCommandStore } from "../stores/commandStore";
 import {
   clampSidebarWidth,
   SIDEBAR_DEFAULT_WIDTH,
@@ -66,6 +68,10 @@ interface ListItemController {
   openListId: string | null;
   /** The list whose emoji just changed — plays a one-shot pop animation. */
   poppedListId: string | null;
+  /** The list under the keyboard cursor while pane [1] is active, or null. */
+  focusedListKey: string | null;
+  /** True while pane [1] owns the keyboard, so the cursor highlight shows. */
+  kbdActive: boolean;
   onSelect: (listId: string) => void;
   onContextMenu: (e: React.MouseEvent, listId: string) => void;
   onStartRename: (listId: string) => void;
@@ -366,6 +372,8 @@ function SortableListItem({
   const isRenaming = controller.renamingListId === list.id;
   const isOpen = controller.openListId === list.id;
   const isPopped = controller.poppedListId === list.id;
+  const isKbdFocus =
+    controller.kbdActive && controller.focusedListKey === list.id;
   const openCount = useTodosStore((s) => {
     const t = s.todosByList[list.id];
     return t ? t.filter((x) => !x.completed).length : null;
@@ -454,7 +462,8 @@ function SortableListItem({
         </div>
       ) : (
         <div
-          className={`nav-item ${isActive ? "active" : ""} ${isOpen ? "is-open" : ""}`}
+          data-list-key={list.id}
+          className={`nav-item ${isActive ? "active" : ""} ${isOpen ? "is-open" : ""} ${isKbdFocus ? "is-kbd-focus" : ""}`}
           role="button"
           tabIndex={0}
           onClick={() => controller.onSelect(list.id)}
@@ -498,12 +507,14 @@ function SharedListRow({
   list,
   isActive,
   isOpen,
+  isKbdFocus,
   onSelect,
   onContextMenu,
 }: {
   list: SidebarList;
   isActive: boolean;
   isOpen: boolean;
+  isKbdFocus: boolean;
   onSelect: () => void;
   onContextMenu: (e: React.MouseEvent) => void;
 }) {
@@ -514,7 +525,8 @@ function SharedListRow({
   return (
     <div className="nav-item-wrapper shared-row">
       <div
-        className={`nav-item ${isActive ? "active" : ""} ${isOpen ? "is-open" : ""}`}
+        data-list-key={list.id}
+        className={`nav-item ${isActive ? "active" : ""} ${isOpen ? "is-open" : ""} ${isKbdFocus ? "is-kbd-focus" : ""}`}
         role="button"
         tabIndex={0}
         onClick={onSelect}
@@ -651,6 +663,9 @@ export default function Sidebar() {
   const { currentView, selectedListId, navigateToToday, navigateToList } =
     useNavigationStore();
   const openShareDialog = useShareDialogStore((s) => s.open);
+  const activeSection = useUiStore((s) => s.activeSection);
+  const focusedListKey = useCommandStore((s) => s.focusedListKey);
+  const kbdActive = activeSection === 1;
 
   /* Per-list interaction state (one at a time, lifted out of the rows). */
   const [menu, setMenu] = useState<{
@@ -852,6 +867,8 @@ export default function Sidebar() {
     renamingListId,
     openListId: menu?.listId ?? emoji?.listId ?? null,
     poppedListId,
+    focusedListKey,
+    kbdActive,
     onSelect: navigateToList,
     onContextMenu: (e, listId) => {
       e.preventDefault();
@@ -1031,7 +1048,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`sidebar tui-pane ${resizing ? "is-resizing" : ""}`}
+      className={`sidebar tui-pane ${resizing ? "is-resizing" : ""} ${kbdActive ? "is-active" : ""}`}
       style={{ width: sidebarWidth }}
     >
       {/* Right-edge resize handle (drag, double-click to reset, arrows) */}
@@ -1040,50 +1057,55 @@ export default function Sidebar() {
       </div>
 
       <div className="pane-head">
-        <span className="pane-head__lead">─</span>
-        <span className="pane-head__tag">[1]</span>
-        <span className="pane-head__name">lists</span>
-        <span className="pane-head__rule" />
-        <div className="add-menu-wrapper" ref={addMenuRef}>
-          <button
-            className="pane-head-add"
-            onClick={() => setShowAddMenu(!showAddMenu)}
-            title="New list or section"
-          >
-            +
-          </button>
-          {showAddMenu && (
-            <div className="add-menu">
-              <button
-                onClick={() => {
-                  setAddingList(true);
-                  setAddingSection(false);
-                  setNewName("");
-                  setShowAddMenu(false);
-                }}
-              >
-                new list
-              </button>
-              <button
-                onClick={() => {
-                  setAddingSection(true);
-                  setAddingList(false);
-                  setNewName("");
-                  setShowAddMenu(false);
-                }}
-              >
-                new section
-              </button>
-            </div>
-          )}
-        </div>
+        <span className="pane-head__title">
+          <span className="pane-head__tag">[1]</span>
+          <span className="pane-head__name">lists</span>
+        </span>
+        <span className="pane-head__actions">
+          <div className="add-menu-wrapper" ref={addMenuRef}>
+            <button
+              className="pane-head-add"
+              onClick={() => setShowAddMenu(!showAddMenu)}
+              title="New list or section"
+            >
+              +
+            </button>
+            {showAddMenu && (
+              <div className="add-menu">
+                <button
+                  onClick={() => {
+                    setAddingList(true);
+                    setAddingSection(false);
+                    setNewName("");
+                    setShowAddMenu(false);
+                  }}
+                >
+                  new list
+                </button>
+                <button
+                  onClick={() => {
+                    setAddingSection(true);
+                    setAddingList(false);
+                    setNewName("");
+                    setShowAddMenu(false);
+                  }}
+                >
+                  new section
+                </button>
+              </div>
+            )}
+          </div>
+        </span>
       </div>
 
       <div className="sidebar-content">
         {/* Today */}
         <div className="views-box">
           <button
-            className={`nav-item today-btn ${currentView === "today" ? "active" : ""}`}
+            data-list-key="today"
+            className={`nav-item today-btn ${currentView === "today" ? "active" : ""} ${
+              kbdActive && focusedListKey === "today" ? "is-kbd-focus" : ""
+            }`}
             onClick={navigateToToday}
           >
             <span className="nav-icon">☼</span>
@@ -1189,6 +1211,7 @@ export default function Sidebar() {
                   list={list}
                   isActive={selectedListId === list.id}
                   isOpen={menu?.listId === list.id}
+                  isKbdFocus={kbdActive && focusedListKey === list.id}
                   onSelect={() => navigateToList(list.id)}
                   onContextMenu={(e) => {
                     e.preventDefault();

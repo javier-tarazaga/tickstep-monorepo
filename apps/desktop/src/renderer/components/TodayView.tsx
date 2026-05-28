@@ -81,12 +81,12 @@ export default function TodayView() {
   return (
     <>
       <div className="pane-head">
-        <span className="pane-head__lead">─</span>
-        <span className="pane-head__tag">[2]</span>
-        <span className="pane-head__name">☼ today</span>
-        <span className="pane-head__rule" />
-        <span className="pane-head__meta">
-          <span className="accent">{todayTodos.length}</span> open
+        <span className="pane-head__title">
+          <span className="pane-head__tag">[2]</span>
+          <span className="pane-head__name">☼ today</span>
+          <span className="pane-head__meta">
+            · <span className="accent">{todayTodos.length}</span> open
+          </span>
         </span>
       </div>
 

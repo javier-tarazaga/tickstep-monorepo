@@ -117,10 +117,10 @@ export default function ListView({ listId }: ListViewProps) {
     return (
       <>
         <div className="pane-head">
-          <span className="pane-head__lead">─</span>
-          <span className="pane-head__tag">[2]</span>
-          <span className="pane-head__name">not found</span>
-          <span className="pane-head__rule" />
+          <span className="pane-head__title">
+            <span className="pane-head__tag">[2]</span>
+            <span className="pane-head__name">not found</span>
+          </span>
         </div>
         <div className="main-body">
           <div className="empty-state">
@@ -139,26 +139,28 @@ export default function ListView({ listId }: ListViewProps) {
   return (
     <>
       <div className="pane-head">
-        <span className="pane-head__lead">─</span>
-        <span className="pane-head__tag">[2]</span>
-        <span className="pane-head__name">
-          {section ? `${section.name} / ` : ""}
-          {list.emoji ? `${list.emoji} ` : ""}
-          {list.name}
-        </span>
-        <span className="pane-head__rule" />
-        {total > 0 && (
-          <span className="pane-head__meta">
-            <span className="accent">{done}</span>/{total} done
+        <span className="pane-head__title">
+          <span className="pane-head__tag">[2]</span>
+          <span className="pane-head__name">
+            {section ? `${section.name} / ` : ""}
+            {list.emoji ? `${list.emoji} ` : ""}
+            {list.name}
           </span>
-        )}
-        <button
-          className={`list-share-btn ${list.isShared ? "is-shared" : ""}`}
-          onClick={() => openShareDialog(listId)}
-          title={list.isShared ? "Manage sharing" : "Share list"}
-        >
-          {list.isShared ? `shared·${list.members.length}` : "share"}
-        </button>
+          {total > 0 && (
+            <span className="pane-head__meta">
+              · <span className="accent">{done}</span>/{total} done
+            </span>
+          )}
+        </span>
+        <span className="pane-head__actions">
+          <button
+            className={`list-share-btn ${list.isShared ? "is-shared" : ""}`}
+            onClick={() => openShareDialog(listId)}
+            title={list.isShared ? "Manage sharing" : "Share list"}
+          >
+            {list.isShared ? `shared·${list.members.length}` : "share"}
+          </button>
+        </span>
       </div>
 
       <div className="main-body">

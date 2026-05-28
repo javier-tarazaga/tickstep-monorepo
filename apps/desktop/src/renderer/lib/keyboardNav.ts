@@ -39,3 +39,56 @@ export function getVisibleTodoOrder(): VisibleTodoRef[] {
     );
   return [...collect(false), ...collect(true)];
 }
+
+/** A selectable row in the Lists sidebar, in render order. */
+export interface VisibleListRef {
+  /** "today" for the Today row, otherwise the list id. */
+  key: string;
+  /** The list to open, or null for the Today view. */
+  listId: string | null;
+}
+
+/**
+ * The sidebar rows the keyboard cursor can land on, top to bottom. Mirrors
+ * Sidebar's render order: Today, then each expanded section's lists, then
+ * unsectioned lists, then lists shared with you. Collapsed sections contribute
+ * nothing (their lists aren't on screen). Reads stores via getState() so it can
+ * run from a plain event handler.
+ */
+export function getVisibleListOrder(): VisibleListRef[] {
+  const { lists, sections, unsectionedListIds } = useTodoListsStore.getState();
+
+  const owned = lists.filter((l) => l.isOwner !== false);
+  const shared = lists.filter((l) => l.isOwner === false);
+  const byId = new Map(owned.map((l) => [l.id, l]));
+  const sectionedIds = new Set(sections.flatMap((s) => s.listIds));
+
+  const rows: VisibleListRef[] = [{ key: "today", listId: null }];
+
+  for (const section of sections) {
+    if (!section.isExpanded) continue;
+    for (const id of section.listIds) {
+      if (byId.has(id)) rows.push({ key: id, listId: id });
+    }
+  }
+
+  // Unsectioned owned lists, persisted order first, then any stragglers.
+  const seen = new Set<string>();
+  for (const id of unsectionedListIds) {
+    if (byId.has(id) && !sectionedIds.has(id)) {
+      rows.push({ key: id, listId: id });
+      seen.add(id);
+    }
+  }
+  for (const l of owned) {
+    if (!sectionedIds.has(l.id) && !seen.has(l.id)) {
+      rows.push({ key: l.id, listId: l.id });
+    }
+  }
+
+  for (const l of [...shared].sort((a, b) => a.name.localeCompare(b.name))) {
+    rows.push({ key: l.id, listId: l.id });
+  }
+
+  return rows;
+}

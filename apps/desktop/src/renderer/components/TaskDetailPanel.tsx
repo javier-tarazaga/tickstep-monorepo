@@ -4,6 +4,7 @@ import { useNavigationStore } from "../stores/navigationStore";
 import { useTodosStore } from "../stores/todosStore";
 import { useLabelsStore } from "../stores/labelsStore";
 import { useTodoListsStore } from "../stores/todoListsStore";
+import { useUiStore } from "../stores/uiStore";
 import {
   clampTaskPanelWidth,
   TASK_PANEL_DEFAULT_WIDTH,
@@ -156,6 +157,7 @@ export default function TaskDetailPanel() {
   );
 
   const fetchLabels = useLabelsStore((s) => s.fetchLabels);
+  const activeSection = useUiStore((s) => s.activeSection);
   const { width, dragging, handleProps } = useTaskPanelResize();
 
   useEffect(() => {
@@ -166,7 +168,7 @@ export default function TaskDetailPanel() {
 
   return (
     <aside
-      className={`task-panel tui-pane pane--right ${dragging ? "is-resizing" : ""}`}
+      className={`task-panel tui-pane pane--right ${dragging ? "is-resizing" : ""} ${activeSection === 3 ? "is-active" : ""}`}
       style={{ width }}
     >
       <div className="task-panel-resizer" {...handleProps}>
@@ -174,19 +176,21 @@ export default function TaskDetailPanel() {
       </div>
 
       <div className="pane-head">
-        <span className="pane-head__lead">─</span>
-        <span className="pane-head__tag">[3]</span>
-        <span className="pane-head__name">detail</span>
-        <span className="pane-head__rule" />
+        <span className="pane-head__title">
+          <span className="pane-head__tag">[3]</span>
+          <span className="pane-head__name">detail</span>
+        </span>
         {active && (
-          <button
-            className="task-panel-close"
-            onClick={closeTodo}
-            title="Close (Esc)"
-            aria-label="Close panel"
-          >
-            esc
-          </button>
+          <span className="pane-head__actions">
+            <button
+              className="task-panel-close"
+              onClick={closeTodo}
+              title="Close (Esc)"
+              aria-label="Close panel"
+            >
+              esc
+            </button>
+          </span>
         )}
       </div>
 

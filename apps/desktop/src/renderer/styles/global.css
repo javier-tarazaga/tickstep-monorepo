@@ -297,7 +297,10 @@ body {
   gap: 10px;
 }
 
-/* Shared pane frame */
+/* Shared pane frame — a single 1px box whose top edge carries the title.
+   overflow is visible so the embedded title can straddle that top edge; the
+   inner scroll regions (.sidebar-content / .main-body / .task-panel-content)
+   clip their own content. */
 .tui-pane {
   position: relative;
   display: flex;
@@ -305,12 +308,14 @@ body {
   min-height: 0;
   border: 1px solid var(--frame);
   background: var(--pane);
-  border-radius: 2px;
-  overflow: hidden;
+  border-radius: 0;
+  overflow: visible;
   animation: paneBoot 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
-.tui-pane:focus-within {
-  border-color: var(--frame-bright);
+/* The keyboard-active pane: its top line and tag light up in accent. */
+.tui-pane.is-active {
+  border-color: var(--amber-line);
+  border-top-color: var(--amber);
 }
 @keyframes paneBoot {
   from {
@@ -329,40 +334,53 @@ body {
   animation-delay: 0.12s;
 }
 
-/* Pane header — "─ [n] Label ─────────────────  meta" */
+/* Pane header. The title and actions are absolutely positioned so they sit ON
+   the pane's single top border line (classic "┌─ [n] Label ─┐" TUI titling),
+   masking the border behind their text. The element itself is just a short
+   spacer that keeps body content clear of that line. */
 .pane-head {
-  display: flex;
+  position: relative;
+  height: 16px;
+  flex-shrink: 0;
+}
+/* The embedded title block — straddles the top edge, left side. */
+.pane-head__title,
+.pane-head__actions {
+  position: absolute;
+  top: -1px;
+  transform: translateY(-50%);
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: var(--pane-head-h);
-  flex-shrink: 0;
-  padding: 0 12px;
-  border-bottom: 1px solid var(--frame);
-  background: var(--pane-raise);
+  padding: 0 8px;
+  background: var(--pane);
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ink-faint);
   white-space: nowrap;
+  z-index: 1;
 }
-.pane-head__lead {
-  color: var(--frame-bright);
-  letter-spacing: 0;
+.pane-head__title {
+  left: 12px;
+  max-width: calc(100% - 32px);
+}
+.pane-head__actions {
+  right: 12px;
+  gap: 6px;
+  -webkit-app-region: no-drag;
 }
 .pane-head__tag {
   color: var(--amber);
   font-weight: 700;
 }
+.tui-pane.is-active .pane-head__tag {
+  color: var(--amber-bright);
+}
 .pane-head__name {
   color: var(--ink-dim);
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.pane-head__rule {
-  flex: 1;
-  height: 0;
-  border-top: 1px solid var(--frame);
-  min-width: 12px;
 }
 .pane-head__meta {
   color: var(--ink-faint);
@@ -374,16 +392,15 @@ body {
 }
 .pane-head .add-menu-wrapper {
   position: relative;
-  margin-left: 4px;
 }
 .pane-head-add {
-  background: none;
+  background: var(--pane);
   border: 1px solid var(--frame);
   color: var(--ink-faint);
   font-family: var(--mono);
   font-size: 13px;
   line-height: 1;
-  padding: 1px 7px;
+  padding: 0 7px;
   cursor: pointer;
   transition: color 0.12s, border-color 0.12s;
 }
@@ -799,6 +816,15 @@ body {
 }
 .nav-item.is-open {
   background: var(--pane-raise);
+}
+/* keyboard cursor while pane [1] is active — a steel-blue cue ring */
+.nav-item.is-kbd-focus {
+  background: var(--sel-bg);
+  box-shadow: inset 0 0 0 1px var(--amber-line);
+}
+.nav-item.is-kbd-focus .nav-icon,
+.nav-item.is-kbd-focus .nav-item-label {
+  color: var(--amber-bright);
 }
 .nav-item-editing {
   gap: 6px;

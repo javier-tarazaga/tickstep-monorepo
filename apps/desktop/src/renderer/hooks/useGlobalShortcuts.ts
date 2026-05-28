@@ -2,7 +2,8 @@ import { useEffect } from "react";
 import { useNavigationStore } from "../stores/navigationStore";
 import { useCommandStore } from "../stores/commandStore";
 import { useTodosStore } from "../stores/todosStore";
-import { getVisibleTodoOrder } from "../lib/keyboardNav";
+import { useUiStore, type Section } from "../stores/uiStore";
+import { getVisibleListOrder, getVisibleTodoOrder } from "../lib/keyboardNav";
 
 /** True when the event targets an editable field, where typing should win. */
 function isTypingTarget(target: EventTarget | null): boolean {
@@ -50,6 +51,66 @@ function toggleFocusedTodo() {
   if (!focusedTodoId) return;
   const ref = getVisibleTodoOrder().find((t) => t.id === focusedTodoId);
   if (ref) useTodosStore.getState().toggleTodo(ref.listId, ref.id);
+}
+
+/* ── Pane [1] Lists: move the sidebar cursor and open lists ───────── */
+
+/** Move the Lists cursor by `delta` rows and scroll the new row into view. */
+function moveListCursor(delta: number) {
+  const order = getVisibleListOrder();
+  if (order.length === 0) return;
+
+  const { focusedListKey, setFocusedListKey } = useCommandStore.getState();
+  const current = order.findIndex((r) => r.key === focusedListKey);
+  const nextIndex =
+    current === -1
+      ? delta > 0
+        ? 0
+        : order.length - 1
+      : Math.min(Math.max(current + delta, 0), order.length - 1);
+
+  const next = order[nextIndex];
+  if (!next) return;
+  setFocusedListKey(next.key);
+  requestAnimationFrame(() => {
+    document
+      .querySelector(`[data-list-key="${next.key}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  });
+}
+
+/** Open the list under the Lists cursor, then hand the keyboard to pane [2]. */
+function openFocusedList() {
+  const { focusedListKey } = useCommandStore.getState();
+  if (!focusedListKey) return;
+  const nav = useNavigationStore.getState();
+  if (focusedListKey === "today") nav.navigateToToday();
+  else nav.navigateToList(focusedListKey);
+  useUiStore.getState().setActiveSection(2);
+}
+
+/* ── Pane [3] Detail: arrows scroll the detail body ───────────────── */
+
+function scrollActiveDetail(delta: number) {
+  const el = document.querySelector(".task-panel-content");
+  if (el instanceof HTMLElement) el.scrollBy({ top: delta });
+}
+
+/**
+ * Switch the keyboard-active pane. When landing on Lists [1], seed its cursor
+ * from the current selection so ↑/↓ has somewhere to start.
+ */
+function activateSection(section: Section) {
+  useUiStore.getState().setActiveSection(section);
+  if (section !== 1) return;
+  const command = useCommandStore.getState();
+  if (command.focusedListKey) return;
+  const nav = useNavigationStore.getState();
+  const seed =
+    nav.currentView === "today"
+      ? "today"
+      : nav.selectedListId ?? getVisibleListOrder()[0]?.key ?? null;
+  command.setFocusedListKey(seed);
 }
 
 /** Cmd+N: focus the add-task input, or pick a list first when on Today. */
@@ -114,33 +175,73 @@ export function useGlobalShortcuts() {
       // Plain keys must not hijack typing.
       if (isTypingTarget(e.target)) return;
 
+      // Switch the active pane: 1/2/3 jump, Tab/⇧Tab cycle. Bare keys only, so
+      // OS chords like ⌘1 keep their meaning.
+      if (!mod && (e.key === "1" || e.key === "2" || e.key === "3")) {
+        e.preventDefault();
+        activateSection(Number(e.key) as Section);
+        return;
+      }
+      if (!mod && e.key === "Tab") {
+        e.preventDefault();
+        const dir = e.shiftKey ? -1 : 1;
+        useUiStore.getState().cycleSection(dir);
+        activateSection(useUiStore.getState().activeSection);
+        return;
+      }
+
       if (e.key === "?") {
         e.preventDefault();
         command.openHelp();
-      } else if (e.key === "ArrowDown") {
+        return;
+      }
+
+      const section = useUiStore.getState().activeSection;
+
+      // ↑/↓ drive whichever pane is active.
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         e.preventDefault();
-        moveCursor(1);
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        moveCursor(-1);
-      } else if (e.key === "Enter" && command.focusedTodoId) {
-        // Only claim Enter when a row cursor is active, so it can't double-fire
-        // with whatever element actually holds DOM focus.
-        e.preventDefault();
-        openFocusedTodo();
-      } else if (e.key === " " && command.focusedTodoId) {
+        const delta = e.key === "ArrowDown" ? 1 : -1;
+        if (section === 1) moveListCursor(delta);
+        else if (section === 3) scrollActiveDetail(delta * 64);
+        else moveCursor(delta);
+        return;
+      }
+
+      if (e.key === "Enter") {
+        if (section === 1 && command.focusedListKey) {
+          e.preventDefault();
+          openFocusedList();
+        } else if (section === 2 && command.focusedTodoId) {
+          // Only claim Enter when a row cursor is active, so it can't
+          // double-fire with whatever element actually holds DOM focus.
+          e.preventDefault();
+          openFocusedTodo();
+        }
+        return;
+      }
+
+      if (e.key === " " && section === 2 && command.focusedTodoId) {
         // Space toggles the highlighted row's completed state, mirroring its
         // checkbox. Gated to a live cursor so it can't steal Space (and the
         // default page scroll only matters once a row is highlighted anyway).
         e.preventDefault();
         toggleFocusedTodo();
-      } else if (e.key === "Escape" && command.focusedTodoId) {
-        // Clear the keyboard cursor so the user can return to "nothing
-        // highlighted". Defer to the detail panel's own Escape when it's open
-        // (that one closes the panel); a later Escape then clears the cursor.
-        if (useNavigationStore.getState().selectedTodoId) return;
-        e.preventDefault();
-        command.setFocusedTodo(null);
+        return;
+      }
+
+      if (e.key === "Escape") {
+        // Clear the active pane's keyboard cursor so the user can return to
+        // "nothing highlighted". Defer to the detail panel's own Escape when
+        // it's open (that one closes the panel); a later Escape then clears.
+        if (section === 1 && command.focusedListKey) {
+          e.preventDefault();
+          command.setFocusedListKey(null);
+        } else if (section === 2 && command.focusedTodoId) {
+          if (useNavigationStore.getState().selectedTodoId) return;
+          e.preventDefault();
+          command.setFocusedTodo(null);
+        }
       }
     };
 

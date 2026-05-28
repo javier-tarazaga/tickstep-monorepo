@@ -35,13 +35,14 @@ function slug(name: string): string {
 
 /* The keybind hints shown along the bottom — the shortcuts that actually work. */
 const KEY_HINTS: { k: string; d: string }[] = [
+  { k: "1·2·3", d: "pane" },
+  { k: "tab", d: "cycle" },
   { k: "↑↓", d: "move" },
   { k: "space", d: "toggle" },
   { k: "↵", d: "open" },
   { k: `${MOD}K`, d: "cmd" },
   { k: `${MOD}N`, d: "add" },
   { k: "?", d: "help" },
-  { k: "esc", d: "back" },
 ];
 
 export default function AppLayout() {
@@ -52,6 +53,7 @@ export default function AppLayout() {
   const closeShareDialog = useShareDialogStore((s) => s.close);
   const mode = useUiStore((s) => s.mode);
   const setMode = useUiStore((s) => s.setMode);
+  const activeSection = useUiStore((s) => s.activeSection);
   const lists = useTodoListsStore((s) => s.lists);
   const todosByList = useTodosStore((s) => s.todosByList);
 
@@ -136,7 +138,9 @@ export default function AppLayout() {
       {/* ── Workspace: three tiled panes ────────────────────── */}
       <div className="workspace">
         <Sidebar />
-        <main className="main-content tui-pane pane--mid">
+        <main
+          className={`main-content tui-pane pane--mid ${activeSection === 2 ? "is-active" : ""}`}
+        >
           {currentView === "today" && <TodayView />}
           {currentView === "list" && selectedListId && (
             <ListView listId={selectedListId} />

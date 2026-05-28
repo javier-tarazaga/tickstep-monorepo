@@ -16,6 +16,11 @@ interface CommandState {
   /** The todo row highlighted by the keyboard cursor (↑/↓), or null if none. */
   focusedTodoId: string | null;
   /**
+   * The sidebar row highlighted by the keyboard cursor while pane [1] is active.
+   * "today" for the Today row, otherwise a list id. Null when nothing is cued.
+   */
+  focusedListKey: string | null;
+  /**
    * The list whose "add task" input should be focused, or null. Keyed by listId
    * (not a bare flag) so that only the matching ListView consumes it — this
    * survives the navigate-then-focus race when switching lists from the palette.
@@ -29,6 +34,7 @@ interface CommandState {
   openHelp: () => void;
   closeHelp: () => void;
   setFocusedTodo: (todoId: string | null) => void;
+  setFocusedListKey: (key: string | null) => void;
   requestAddTaskFocus: (listId: string) => void;
   clearAddTaskFocus: () => void;
 }
@@ -38,6 +44,7 @@ export const useCommandStore = create<CommandState>((set) => ({
   paletteMode: "default",
   helpOpen: false,
   focusedTodoId: null,
+  focusedListKey: null,
   pendingAddTaskListId: null,
 
   openPalette: (mode = "default") =>
@@ -52,6 +59,7 @@ export const useCommandStore = create<CommandState>((set) => ({
   openHelp: () => set({ helpOpen: true, paletteOpen: false }),
   closeHelp: () => set({ helpOpen: false }),
   setFocusedTodo: (todoId) => set({ focusedTodoId: todoId }),
+  setFocusedListKey: (key) => set({ focusedListKey: key }),
   requestAddTaskFocus: (listId) => set({ pendingAddTaskListId: listId }),
   clearAddTaskFocus: () => set({ pendingAddTaskListId: null }),
 }));

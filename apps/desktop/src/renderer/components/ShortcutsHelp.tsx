@@ -12,11 +12,13 @@ interface Shortcut {
 }
 
 const SHORTCUTS: Shortcut[] = [
+  { keys: ["1", "2", "3"], description: "Jump to Lists / Tasks / Detail" },
+  { keys: ["Tab"], description: "Cycle to the next pane (⇧ for previous)" },
   { keys: [MOD, "K"], description: "Open the command palette" },
   { keys: [MOD, "N"], description: "New task" },
   { keys: [MOD, "T"], description: "Go to Today" },
-  { keys: ["↑", "↓"], description: "Move between tasks" },
-  { keys: ["Enter"], description: "Open the highlighted task" },
+  { keys: ["↑", "↓"], description: "Move within the active pane" },
+  { keys: ["Enter"], description: "Open the highlighted list or task" },
   { keys: ["Space"], description: "Mark the highlighted task complete" },
   { keys: ["Esc"], description: "Close panel, palette, or dialog" },
   { keys: ["?"], description: "Show this help" },
