@@ -8,7 +8,6 @@ import {
   Post,
   Query,
   BadRequestException,
-  UseGuards,
 } from "@nestjs/common";
 import type {
   ApiResponse,
@@ -19,13 +18,12 @@ import type {
   UpdateTodoDto,
 } from "@todo-app/shared-types";
 import { validateCreateTodo, validateUpdateTodo } from "@todo-app/shared-utils";
-import { AuthGuard, CurrentUser, type AuthUser } from "../auth";
+import { CurrentUser, type AuthUser } from "../auth";
 import { LabelsService } from "../labels/labels.service";
 import { TodoListsService } from "../todo-lists/todo-lists.service";
 import { TodosService } from "./todos.service";
 
 @Controller("todo-lists/:listId/todos")
-@UseGuards(AuthGuard)
 export class TodosController {
   constructor(
     private readonly todosService: TodosService,

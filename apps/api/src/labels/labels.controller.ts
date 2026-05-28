@@ -7,7 +7,6 @@ import {
   Param,
   Patch,
   Post,
-  UseGuards,
 } from "@nestjs/common";
 import type {
   ApiResponse,
@@ -20,11 +19,10 @@ import {
   validateUpdateLabel,
   type ValidationError,
 } from "@todo-app/shared-utils";
-import { AuthGuard, CurrentUser, type AuthUser } from "../auth";
+import { CurrentUser, type AuthUser } from "../auth";
 import { LabelsService } from "./labels.service";
 
 @Controller("labels")
-@UseGuards(AuthGuard)
 export class LabelsController {
   constructor(private readonly labelsService: LabelsService) {}
 

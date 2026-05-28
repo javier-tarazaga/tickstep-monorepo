@@ -6,7 +6,6 @@ import {
   Param,
   Patch,
   Post,
-  UseGuards,
   BadRequestException,
 } from "@nestjs/common";
 import type {
@@ -14,11 +13,10 @@ import type {
   CreateTodoListDto,
   UpdateTodoListDto,
 } from "@todo-app/shared-types";
-import { AuthGuard, CurrentUser, type AuthUser } from "../auth";
+import { CurrentUser, type AuthUser } from "../auth";
 import { TodoListsService, type TodoList } from "./todo-lists.service";
 
 @Controller("todo-lists")
-@UseGuards(AuthGuard)
 export class TodoListsController {
   constructor(private readonly todoListsService: TodoListsService) {}
 

@@ -3,14 +3,12 @@ import {
   Controller,
   Get,
   Put,
-  UseGuards,
 } from "@nestjs/common";
 import type { ApiResponse, SidebarLayout, SidebarLayoutResponse } from "@todo-app/shared-types";
-import { AuthGuard, CurrentUser, type AuthUser } from "../auth";
+import { CurrentUser, type AuthUser } from "../auth";
 import { SidebarLayoutService } from "./sidebar-layout.service";
 
 @Controller("sidebar-layout")
-@UseGuards(AuthGuard)
 export class SidebarLayoutController {
   constructor(private readonly sidebarLayoutService: SidebarLayoutService) {}
 
