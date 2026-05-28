@@ -99,15 +99,6 @@ export default function TodayView() {
           </div>
         )}
 
-        {hasAny && (
-          <div className="col-head">
-            <span />
-            <span className="col-title">title · tags</span>
-            <span className="col-prio">prio</span>
-            <span className="col-due">list</span>
-          </div>
-        )}
-
         {todayTodos.length > 0 && (
           <div className="todo-items">
             {todayTodos.map((todo) => renderRow(todo, false))}

@@ -188,15 +188,6 @@ export default function ListView({ listId }: ListViewProps) {
           </div>
         )}
 
-        {todos.length > 0 && (
-          <div className="col-head">
-            <span />
-            <span className="col-title">title · tags</span>
-            <span className="col-prio">prio</span>
-            <span className="col-due">due</span>
-          </div>
-        )}
-
         {incompleteTodos.length > 0 && (
           <div className="todo-items">
             {incompleteTodos.map((todo) => (
