@@ -1,4 +1,4 @@
-import { TodoApiClient } from "@todo-app/api-client";
+import { TodoApiClient } from "@tickstep/api-client";
 import { useAuthStore } from "./stores/authStore";
 import { TokenRefreshManager } from "./services/tokenRefreshManager";
 

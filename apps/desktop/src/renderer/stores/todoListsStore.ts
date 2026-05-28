@@ -4,7 +4,7 @@ import type {
   SidebarLayout,
   SidebarSection,
   UpdateTodoListDto,
-} from "@todo-app/shared-types";
+} from "@tickstep/shared-types";
 import { apiClient } from "../api";
 
 /** A "section" is a named grouping of lists */
@@ -62,8 +62,31 @@ interface TodoListsState {
   setLayout: (sections: ListSection[], unsectionedListIds: string[]) => void;
 }
 
-const SECTIONS_STORAGE_KEY = "todo-app-sections";
-const UNSECTIONED_STORAGE_KEY = "todo-app-unsectioned-list-ids";
+const SECTIONS_STORAGE_KEY = "tickstep-sections";
+const UNSECTIONED_STORAGE_KEY = "tickstep-unsectioned-list-ids";
+
+// Pre-rebrand keys. Migrate any existing layout so the rename doesn't wipe it.
+const LEGACY_KEY_MIGRATIONS: ReadonlyArray<readonly [legacy: string, current: string]> = [
+  ["todo-app-sections", SECTIONS_STORAGE_KEY],
+  ["todo-app-unsectioned-list-ids", UNSECTIONED_STORAGE_KEY],
+];
+
+function migrateLegacyLayoutKeys() {
+  for (const [legacyKey, currentKey] of LEGACY_KEY_MIGRATIONS) {
+    try {
+      const legacyValue = localStorage.getItem(legacyKey);
+      if (legacyValue === null) continue;
+      if (localStorage.getItem(currentKey) === null) {
+        localStorage.setItem(currentKey, legacyValue);
+      }
+      localStorage.removeItem(legacyKey);
+    } catch {
+      // Ignore — fall back to defaults if storage is unavailable.
+    }
+  }
+}
+
+migrateLegacyLayoutKeys();
 
 function loadSections(): ListSection[] {
   try {

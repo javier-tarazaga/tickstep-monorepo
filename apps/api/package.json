@@ -1,5 +1,5 @@
 {
-  "name": "@todo-app/api",
+  "name": "@tickstep/api",
   "version": "0.0.0",
   "private": true,
   "scripts": {
@@ -24,8 +24,8 @@
     "@nestjs/platform-express": "^11.1.13",
     "@prisma/client": "^6.19.3",
     "@supabase/supabase-js": "^2.95.3",
-    "@todo-app/shared-types": "workspace:*",
-    "@todo-app/shared-utils": "workspace:*",
+    "@tickstep/shared-types": "workspace:*",
+    "@tickstep/shared-utils": "workspace:*",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "uuid": "^11.1.0"

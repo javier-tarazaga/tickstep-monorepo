@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Label, Todo, UpdateTodoDto } from "@todo-app/shared-types";
+import type { Label, Todo, UpdateTodoDto } from "@tickstep/shared-types";
 import { apiClient } from "../api";
 import { useLabelsStore } from "./labelsStore";
 
@@ -58,35 +58,76 @@ export const useTodosStore = create<TodosState>((set, get) => ({
   },
 
   addTodo: async (listId: string, title: string) => {
-    set({ error: null });
+    // Optimistic: insert a placeholder with a temp id so the row appears on
+    // submit, then swap in the server's todo (real id) once it returns.
+    const tempId = crypto.randomUUID();
+    const now = new Date().toISOString();
+    const placeholder: Todo = {
+      id: tempId,
+      title,
+      description: null,
+      completed: false,
+      dueDate: null,
+      priority: null,
+      labels: [],
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    set((state) => ({
+      error: null,
+      todosByList: {
+        ...state.todosByList,
+        [listId]: [...(state.todosByList[listId] ?? []), placeholder],
+      },
+    }));
+
     try {
       const response = await apiClient.createTodo(listId, { title });
       set((state) => ({
         todosByList: {
           ...state.todosByList,
-          [listId]: [...(state.todosByList[listId] ?? []), response.data],
-        },
-      }));
-    } catch (err) {
-      set({
-        error: err instanceof Error ? err.message : "Failed to add todo",
-      });
-    }
-  },
-
-  removeTodo: async (listId: string, todoId: string) => {
-    set({ error: null });
-    try {
-      await apiClient.deleteTodo(listId, todoId);
-      set((state) => ({
-        todosByList: {
-          ...state.todosByList,
-          [listId]: (state.todosByList[listId] ?? []).filter(
-            (t) => t.id !== todoId,
+          [listId]: (state.todosByList[listId] ?? []).map((t) =>
+            t.id === tempId ? response.data : t,
           ),
         },
       }));
     } catch (err) {
+      // Drop the placeholder; the create never landed.
+      set((state) => ({
+        todosByList: {
+          ...state.todosByList,
+          [listId]: (state.todosByList[listId] ?? []).filter(
+            (t) => t.id !== tempId,
+          ),
+        },
+        error: err instanceof Error ? err.message : "Failed to add todo",
+      }));
+    }
+  },
+
+  removeTodo: async (listId: string, todoId: string) => {
+    // Optimistic: drop the row immediately, keeping a snapshot to roll back to.
+    const previous = get().todosByList[listId];
+
+    set((state) => ({
+      error: null,
+      todosByList: {
+        ...state.todosByList,
+        [listId]: (state.todosByList[listId] ?? []).filter(
+          (t) => t.id !== todoId,
+        ),
+      },
+    }));
+
+    try {
+      await apiClient.deleteTodo(listId, todoId);
+    } catch (err) {
+      if (previous) {
+        set((state) => ({
+          todosByList: { ...state.todosByList, [listId]: previous },
+        }));
+      }
       set({
         error: err instanceof Error ? err.message : "Failed to remove todo",
       });
@@ -94,18 +135,39 @@ export const useTodosStore = create<TodosState>((set, get) => ({
   },
 
   toggleTodo: async (listId: string, todoId: string) => {
-    set({ error: null });
+    // Optimistic: flip `completed` immediately so the checkbox responds
+    // instantly, keeping a snapshot to roll back to. Toggling only ever
+    // changes `completed` server-side, so the local flip is exact.
+    const previous = get().todosByList[listId];
+
+    set((state) => ({
+      error: null,
+      todosByList: {
+        ...state.todosByList,
+        [listId]: (state.todosByList[listId] ?? []).map((t) =>
+          t.id === todoId ? { ...t, completed: !t.completed } : t,
+        ),
+      },
+    }));
+
     try {
       const response = await apiClient.toggleTodo(listId, todoId);
+      // Reconcile only `completed` from the server so a concurrent edit to
+      // another field (title, labels, …) isn't clobbered by a stale snapshot.
       set((state) => ({
         todosByList: {
           ...state.todosByList,
           [listId]: (state.todosByList[listId] ?? []).map((t) =>
-            t.id === todoId ? response.data : t,
+            t.id === todoId ? { ...t, completed: response.data.completed } : t,
           ),
         },
       }));
     } catch (err) {
+      if (previous) {
+        set((state) => ({
+          todosByList: { ...state.todosByList, [listId]: previous },
+        }));
+      }
       set({
         error: err instanceof Error ? err.message : "Failed to toggle todo",
       });

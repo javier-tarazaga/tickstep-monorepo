@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Todo App",
-    "slug": "todo-app-mobile",
+    "name": "Tickstep",
+    "slug": "tickstep-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,14 +14,14 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.todoapp.mobile"
+      "bundleIdentifier": "com.tickstep.mobile"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.todoapp.mobile"
+      "package": "com.tickstep.mobile"
     },
     "plugins": ["expo-router"]
   }

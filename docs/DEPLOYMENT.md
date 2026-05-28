@@ -117,7 +117,7 @@ startup, and reached Supabase Auth.
 - **Schema change:** run migrations from your machine against the direct
   connection — do **not** migrate at container startup:
   ```bash
-  pnpm --filter @todo-app/api db:deploy
+  pnpm --filter @tickstep/api db:deploy
   ```
 
 ## Part 2 — Build & distribute the desktop app (macOS)
@@ -126,14 +126,14 @@ Bake the deployed API URL in at build time, then package:
 
 ```bash
 VITE_API_BASE_URL="https://tickstep-api-XXXX.<region>.run.app" \
-  pnpm --filter @todo-app/desktop build
-pnpm --filter @todo-app/desktop package
-# → apps/desktop/release/Todo App-<version>-arm64.dmg
+  pnpm --filter @tickstep/desktop build
+pnpm --filter @tickstep/desktop package
+# → apps/desktop/release/Tickstep-<version>-arm64.dmg
 ```
 
 - The build targets the **host architecture** (arm64 on Apple Silicon). For an
   Intel recipient, build a universal binary:
-  `pnpm --filter @todo-app/desktop exec electron-builder --mac --universal`.
+  `pnpm --filter @tickstep/desktop exec electron-builder --mac --universal`.
 - The CSP in `index.html` allows `https://*.run.app`; widen it if you move to a
   custom domain.
 
@@ -145,7 +145,7 @@ Gatekeeper blocks it on first launch. After dragging it to Applications:
 - Open via **System Settings → Privacy & Security → "Open Anyway"**, or
 - If macOS calls it *"damaged"*, clear the quarantine flag:
   ```bash
-  xattr -dr com.apple.quarantine "/Applications/Todo App.app"
+  xattr -dr com.apple.quarantine "/Applications/Tickstep.app"
   ```
 
 Each user signs up in-app with their own email and gets their own tasks.

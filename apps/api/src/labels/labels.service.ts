@@ -8,7 +8,7 @@ import type {
   CreateLabelDto,
   Label,
   UpdateLabelDto,
-} from "@todo-app/shared-types";
+} from "@tickstep/shared-types";
 import { LabelRepository, type Label as LabelRow } from "./label.repository";
 
 @Injectable()

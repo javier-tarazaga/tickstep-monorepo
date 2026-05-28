@@ -34,7 +34,7 @@ navigationStore.selectedTodoId (+ selectedTodoListId).
 Key conventions to follow (already in the codebase):
 - Repositories return raw Prisma rows; **services map** rows → shared-types domain objects (`toTodo`, `toLabel`).
 - Snake_case columns via `@map`; explicit `@@map` on every model.
-- Manual validation via `@todo-app/shared-utils` functions (no `class-validator`).
+- Manual validation via `@tickstep/shared-utils` functions (no `class-validator`).
 - Controllers wrap responses in `ApiResponse<T>` `{ success, data, message }`.
 - Every query is **ownership-scoped** (`userId` / `todoListId`).
 - Stores: `set((state) => …)` functional updates; api-client called from store actions.
@@ -104,7 +104,7 @@ model TodoLabel {
 }
 ```
 
-**Migration.** Generate with `pnpm --filter @todo-app/api exec prisma migrate dev --name task_detail_fields`
+**Migration.** Generate with `pnpm --filter @tickstep/api exec prisma migrate dev --name task_detail_fields`
 (developer runs this against Supabase; needs `DATABASE_URL`/`DIRECT_URL`). Expected SQL:
 ```sql
 ALTER TABLE "todos" ADD COLUMN "due_date" TIMESTAMPTZ(6);
@@ -258,7 +258,7 @@ async removeLabelFromTodo(listId: string, todoId: string, labelId: string): Prom
 ```
 > `updateTodo(listId, id, dto)` already exists — it now carries `dueDate`/`priority` with no client change.
 
-**Acceptance:** all three packages build (`pnpm --filter @todo-app/shared-types build`, etc.).
+**Acceptance:** all three packages build (`pnpm --filter @tickstep/shared-types build`, etc.).
 
 ---
 

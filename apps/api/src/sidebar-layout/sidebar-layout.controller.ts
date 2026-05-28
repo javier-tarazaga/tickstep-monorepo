@@ -4,7 +4,7 @@ import {
   Get,
   Put,
 } from "@nestjs/common";
-import type { ApiResponse, SidebarLayout, SidebarLayoutResponse } from "@todo-app/shared-types";
+import type { ApiResponse, SidebarLayout, SidebarLayoutResponse } from "@tickstep/shared-types";
 import { CurrentUser, type AuthUser } from "../auth";
 import { SidebarLayoutService } from "./sidebar-layout.service";
 

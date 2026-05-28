@@ -1,5 +1,5 @@
 import { Body, Controller, Post, HttpCode, HttpStatus } from "@nestjs/common";
-import type { ApiResponse } from "@todo-app/shared-types";
+import type { ApiResponse } from "@tickstep/shared-types";
 import { AuthService, type SignUpResult, type SignInResult, type AuthTokens } from "./auth.service";
 import { Public } from "./public.decorator";
 

@@ -6,7 +6,7 @@ import type {
   TodoFilters,
   TodoPriority,
   UpdateTodoDto,
-} from "@todo-app/shared-types";
+} from "@tickstep/shared-types";
 import { TodoRepository, type TodoRow } from "./todo.repository";
 
 @Injectable()

@@ -13,12 +13,12 @@ import type {
   CreateLabelDto,
   Label,
   UpdateLabelDto,
-} from "@todo-app/shared-types";
+} from "@tickstep/shared-types";
 import {
   validateCreateLabel,
   validateUpdateLabel,
   type ValidationError,
-} from "@todo-app/shared-utils";
+} from "@tickstep/shared-utils";
 import { CurrentUser, type AuthUser } from "../auth";
 import { LabelsService } from "./labels.service";
 

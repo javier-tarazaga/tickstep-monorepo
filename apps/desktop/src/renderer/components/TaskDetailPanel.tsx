@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { Label, Todo, TodoPriority } from "@todo-app/shared-types";
+import type { Label, Todo, TodoPriority } from "@tickstep/shared-types";
 import { useNavigationStore } from "../stores/navigationStore";
 import { useTodosStore } from "../stores/todosStore";
 import { useLabelsStore } from "../stores/labelsStore";

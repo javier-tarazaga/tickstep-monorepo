@@ -1,4 +1,4 @@
-import type { CreateTodoDto, UpdateTodoDto } from "@todo-app/shared-types";
+import type { CreateTodoDto, UpdateTodoDto } from "@tickstep/shared-types";
 
 export const TODO_TITLE_MIN_LENGTH = 1;
 export const TODO_TITLE_MAX_LENGTH = 200;

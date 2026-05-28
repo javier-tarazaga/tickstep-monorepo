@@ -1,5 +1,5 @@
 {
-  "name": "@todo-app/shared-utils",
+  "name": "@tickstep/shared-utils",
   "version": "0.0.0",
   "private": true,
   "main": "./dist/index.js",
@@ -18,7 +18,7 @@
     "dev": "tsc --watch --project tsconfig.json"
   },
   "dependencies": {
-    "@todo-app/shared-types": "workspace:*"
+    "@tickstep/shared-types": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.9.3"

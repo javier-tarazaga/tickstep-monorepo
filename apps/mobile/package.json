@@ -1,5 +1,5 @@
 {
-  "name": "@todo-app/mobile",
+  "name": "@tickstep/mobile",
   "version": "0.0.0",
   "private": true,
   "main": "index.js",
@@ -13,9 +13,9 @@
     "clean": "rm -rf dist .expo *.tsbuildinfo"
   },
   "dependencies": {
-    "@todo-app/api-client": "workspace:*",
-    "@todo-app/shared-types": "workspace:*",
-    "@todo-app/shared-utils": "workspace:*",
+    "@tickstep/api-client": "workspace:*",
+    "@tickstep/shared-types": "workspace:*",
+    "@tickstep/shared-utils": "workspace:*",
     "expo": "^54.0.33",
     "expo-linking": "~7.0.5",
     "expo-router": "~5.0.7",

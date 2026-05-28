@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import type { TodoPriority } from "@todo-app/shared-types";
+import type { TodoPriority } from "@tickstep/shared-types";
 
 /* ────────────────────────────────────────────────────────
    Priority metadata

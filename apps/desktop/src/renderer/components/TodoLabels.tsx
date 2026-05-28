@@ -1,4 +1,4 @@
-import type { Todo } from "@todo-app/shared-types";
+import type { Todo } from "@tickstep/shared-types";
 import { labelChipStyle } from "../lib/taskDetail";
 
 /** Label pills shown on a second line beneath a todo's title in list rows.

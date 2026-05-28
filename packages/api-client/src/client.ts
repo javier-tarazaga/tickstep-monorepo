@@ -18,7 +18,7 @@ import type {
   UpdateLabelDto,
   UpdateTodoDto,
   UpdateTodoListDto,
-} from "@todo-app/shared-types";
+} from "@tickstep/shared-types";
 
 export interface TodoApiClientConfig {
   baseUrl: string;

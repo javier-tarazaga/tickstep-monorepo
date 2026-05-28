@@ -29,12 +29,12 @@ RUN corepack enable
 # deps (shared-types, shared-utils) while skipping the desktop/mobile apps so
 # their heavy dependencies (electron, expo) are never installed here.
 COPY . .
-RUN pnpm install --frozen-lockfile --filter "@todo-app/api..."
+RUN pnpm install --frozen-lockfile --filter "@tickstep/api..."
 
 # Build shared-types -> shared-utils -> api in dependency order. The api build
 # script also runs `prisma generate`, producing the query engine for this
 # Linux image.
-RUN pnpm --filter "@todo-app/api..." run build
+RUN pnpm --filter "@tickstep/api..." run build
 
 # ---- Runtime ----------------------------------------------------------------
 FROM node:22-slim AS runner

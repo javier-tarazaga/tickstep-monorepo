@@ -1,4 +1,4 @@
-import type { Todo } from "@todo-app/shared-types";
+import type { Todo } from "@tickstep/shared-types";
 import { CalendarIcon, DescriptionIcon } from "./icons";
 import { formatDueDate, isOverdue, priorityMeta } from "../lib/taskDetail";
 

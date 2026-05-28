@@ -1,4 +1,4 @@
-import type { TodoApiClient } from "@todo-app/api-client";
+import type { TodoApiClient } from "@tickstep/api-client";
 import { useAuthStore } from "../stores/authStore";
 
 /**

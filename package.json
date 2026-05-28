@@ -1,5 +1,5 @@
 {
-  "name": "todo-app",
+  "name": "tickstep",
   "private": true,
   "packageManager": "pnpm@10.29.3",
   "scripts": {

@@ -6,7 +6,7 @@ export default function App() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.content}>
-        <Text style={styles.title}>Todo App</Text>
+        <Text style={styles.title}>Tickstep</Text>
         <Text style={styles.subtitle}>Mobile - React Native</Text>
       </View>
     </SafeAreaView>

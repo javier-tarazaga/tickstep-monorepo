@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Label, UpdateLabelDto } from "@todo-app/shared-types";
+import type { Label, UpdateLabelDto } from "@tickstep/shared-types";
 import { apiClient } from "../api";
 import { useTodosStore } from "./todosStore";
 

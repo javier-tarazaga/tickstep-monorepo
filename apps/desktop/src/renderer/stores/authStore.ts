@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import type { AuthUser, AuthTokens } from "@todo-app/shared-types";
-import { ApiClientError } from "@todo-app/api-client";
+import type { AuthUser, AuthTokens } from "@tickstep/shared-types";
+import { ApiClientError } from "@tickstep/api-client";
 
 interface AuthState {
   user: AuthUser | null;

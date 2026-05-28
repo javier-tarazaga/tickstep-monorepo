@@ -16,8 +16,8 @@ import type {
   Todo,
   TodoFilters,
   UpdateTodoDto,
-} from "@todo-app/shared-types";
-import { validateCreateTodo, validateUpdateTodo } from "@todo-app/shared-utils";
+} from "@tickstep/shared-types";
+import { validateCreateTodo, validateUpdateTodo } from "@tickstep/shared-utils";
 import { CurrentUser, type AuthUser } from "../auth";
 import { LabelsService } from "../labels/labels.service";
 import { TodoListsService } from "../todo-lists/todo-lists.service";

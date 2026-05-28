@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import type { SidebarLayout, SidebarLayoutResponse } from "@todo-app/shared-types";
+import type { SidebarLayout, SidebarLayoutResponse } from "@tickstep/shared-types";
 import { SidebarLayoutRepository } from "./sidebar-layout.repository";
 
 const DEFAULT_LAYOUT: SidebarLayout = {

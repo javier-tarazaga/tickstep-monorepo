@@ -12,7 +12,7 @@ import type {
   ApiResponse,
   CreateTodoListDto,
   UpdateTodoListDto,
-} from "@todo-app/shared-types";
+} from "@tickstep/shared-types";
 import { CurrentUser, type AuthUser } from "../auth";
 import { TodoListsService, type TodoList } from "./todo-lists.service";
 
