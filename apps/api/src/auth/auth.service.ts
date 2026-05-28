@@ -92,6 +92,13 @@ export class AuthService {
       throw new UnauthorizedException("Invalid or expired token");
     }
 
+    // Self-heal the local mirror: provision any authenticated user into
+    // public.users, not just those who freshly sign up or sign in. Without
+    // this, a user whose row is missing (created out-of-band in Supabase
+    // Auth, or lost to a DB reset) stays invisible to email lookups like
+    // invites even though they can use the app normally.
+    await this.userRepository.upsert(data.user.id, data.user.email!);
+
     return { id: data.user.id, email: data.user.email! };
   }
 
