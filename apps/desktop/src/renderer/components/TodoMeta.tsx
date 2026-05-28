@@ -1,39 +1,29 @@
 import type { Todo } from "@tickstep/shared-types";
-import { CalendarIcon, DescriptionIcon } from "./icons";
-import { formatDueDate, isOverdue, priorityMeta } from "../lib/taskDetail";
+import { formatDueDate, isOverdue } from "../lib/taskDetail";
+import PriorityBars from "./PriorityBars";
 
-/** Compact, read-only metadata shown on the right of a todo row: priority dot,
- *  due date, and a description indicator. Labels render separately beneath the
- *  title (see TodoLabels). Renders nothing when there's no metadata. */
-export default function TodoMeta({ todo }: { todo: Todo }) {
-  const pri = priorityMeta(todo.priority);
+/** The right-hand grid cells of a todo row: a priority meter (col 3) and the
+ *  due date (col 4). Emitted as a fragment so each lands in its own table
+ *  column. Pass `showDue={false}` where the due slot is used for something else
+ *  (e.g. the source-list badge on the Today view). */
+export default function TodoMeta({
+  todo,
+  showDue = true,
+}: {
+  todo: Todo;
+  showDue?: boolean;
+}) {
   const overdue =
     todo.dueDate != null && !todo.completed && isOverdue(todo.dueDate);
-  const hasDescription = (todo.description ?? "").trim().length > 0;
-
-  if (!pri && !todo.dueDate && !hasDescription) return null;
 
   return (
-    <span className="todo-meta">
-      {hasDescription && (
-        <span className="todo-meta-description" title="Has a description">
-          <DescriptionIcon size={13} />
-        </span>
-      )}
-
-      {pri && (
-        <span
-          className={`priority-dot ${pri.dotClass}`}
-          title={`${pri.label} priority`}
-        />
-      )}
-
-      {todo.dueDate && (
+    <>
+      <PriorityBars priority={todo.priority} />
+      {showDue && todo.dueDate && (
         <span className={`todo-meta-due ${overdue ? "overdue" : ""}`}>
-          <CalendarIcon size={12} />
           {formatDueDate(todo.dueDate)}
         </span>
       )}
-    </span>
+    </>
   );
 }

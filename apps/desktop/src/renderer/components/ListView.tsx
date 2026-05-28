@@ -7,14 +7,66 @@ import { useShareDialogStore } from "../stores/shareDialogStore";
 import { realtimeClient } from "../realtime";
 import TodoMeta from "./TodoMeta";
 import TodoLabels from "./TodoLabels";
-import { UsersIcon } from "./icons";
 
 interface ListViewProps {
   listId: string;
 }
 
+function TodoRow({
+  todo,
+  selected,
+  focused,
+  completed,
+  onOpen,
+  onToggle,
+  onDelete,
+}: {
+  todo: import("@tickstep/shared-types").Todo;
+  selected: boolean;
+  focused: boolean;
+  completed: boolean;
+  onOpen: () => void;
+  onToggle: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div
+      data-todo-id={todo.id}
+      className={`todo-item ${selected ? "selected" : ""} ${focused ? "focused" : ""}`}
+      onClick={onOpen}
+    >
+      <button
+        className={`todo-checkbox ${completed ? "checked" : ""}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle();
+        }}
+        aria-label={completed ? "Mark incomplete" : "Mark complete"}
+      />
+      <div className="todo-item-main">
+        <span className={`todo-title ${completed ? "completed" : ""}`}>
+          {todo.title}
+        </span>
+        <TodoLabels todo={todo} />
+      </div>
+      <TodoMeta todo={todo} />
+      <button
+        className="todo-delete"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
+        title="Delete"
+        aria-label="Delete task"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
 export default function ListView({ listId }: ListViewProps) {
-  const { lists } = useTodoListsStore();
+  const { lists, sections } = useTodoListsStore();
   const { todosByList, isLoading, fetchTodos, addTodo, removeTodo, toggleTodo } =
     useTodosStore();
   const { selectTodo, selectedTodoId } = useNavigationStore();
@@ -30,6 +82,9 @@ export default function ListView({ listId }: ListViewProps) {
   const incompleteTodos = todos.filter((t) => !t.completed);
   const completedTodos = todos.filter((t) => t.completed);
 
+  // Breadcrumb: the section this list lives in, if any.
+  const section = sections.find((s) => s.listIds.includes(listId));
+
   const openTodo = (todoId: string) => {
     setFocusedTodo(todoId);
     selectTodo(todoId, listId);
@@ -39,13 +94,11 @@ export default function ListView({ listId }: ListViewProps) {
     fetchTodos(listId);
   }, [listId, fetchTodos]);
 
-  // Subscribe to live todo updates for this list while it's open.
   useEffect(() => {
     realtimeClient.joinList(listId);
     return () => realtimeClient.leaveList(listId);
   }, [listId]);
 
-  // Honor a Cmd+N / "new task" request, but only on the list it targeted.
   useEffect(() => {
     if (pendingAddTaskListId === listId) {
       inputRef.current?.focus();
@@ -62,150 +115,137 @@ export default function ListView({ listId }: ListViewProps) {
 
   if (!list) {
     return (
-      <div className="empty-state">
-        <div className="empty-icon">&#128269;</div>
-        <h3>List not found</h3>
-        <p>This list may have been deleted.</p>
-      </div>
+      <>
+        <div className="pane-head">
+          <span className="pane-head__lead">─</span>
+          <span className="pane-head__tag">[2]</span>
+          <span className="pane-head__name">not found</span>
+          <span className="pane-head__rule" />
+        </div>
+        <div className="main-body">
+          <div className="empty-state">
+            <div className="empty-icon">⚠</div>
+            <h3>List not found</h3>
+            <p>This list may have been deleted.</p>
+          </div>
+        </div>
+      </>
     );
   }
 
+  const done = completedTodos.length;
+  const total = todos.length;
+
   return (
-    <div>
-      <div className="list-header">
-        <h2>
-          {list.emoji && (
-            <span className="list-header-emoji" aria-hidden="true">
-              {list.emoji}
-            </span>
-          )}
+    <>
+      <div className="pane-head">
+        <span className="pane-head__lead">─</span>
+        <span className="pane-head__tag">[2]</span>
+        <span className="pane-head__name">
+          {section ? `${section.name} / ` : ""}
+          {list.emoji ? `${list.emoji} ` : ""}
           {list.name}
-        </h2>
+        </span>
+        <span className="pane-head__rule" />
+        {total > 0 && (
+          <span className="pane-head__meta">
+            <span className="accent">{done}</span>/{total} done
+          </span>
+        )}
         <button
           className={`list-share-btn ${list.isShared ? "is-shared" : ""}`}
           onClick={() => openShareDialog(listId)}
           title={list.isShared ? "Manage sharing" : "Share list"}
         >
-          <UsersIcon size={15} />
-          <span>
-            {list.isShared ? `Shared · ${list.members.length}` : "Share"}
-          </span>
+          {list.isShared ? `shared·${list.members.length}` : "share"}
         </button>
       </div>
 
-      {/* Add todo form */}
-      <form className="add-todo-form" onSubmit={handleAdd}>
-        <input
-          ref={inputRef}
-          placeholder="Add a new item..."
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-        />
-        <button type="submit">Add</button>
-      </form>
+      <div className="main-body">
+        <form className="add-todo-form" onSubmit={handleAdd}>
+          <input
+            ref={inputRef}
+            placeholder="add a new item…"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+          />
+          <button type="submit">add</button>
+        </form>
 
-      {isLoading && todos.length === 0 && (
-        <div style={{ padding: "24px 0", textAlign: "center" }}>
-          <span className="spinner" />
-        </div>
-      )}
-
-      {/* Incomplete todos */}
-      {incompleteTodos.length > 0 && (
-        <div className="todo-items" style={{ marginTop: 16 }}>
-          {incompleteTodos.map((todo) => (
-            <div
-              key={todo.id}
-              data-todo-id={todo.id}
-              className={`todo-item ${selectedTodoId === todo.id ? "selected" : ""} ${
-                focusedTodoId === todo.id ? "focused" : ""
-              }`}
-              onClick={() => openTodo(todo.id)}
-            >
-              <button
-                className="todo-checkbox"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleTodo(listId, todo.id);
-                }}
-              />
-              <div className="todo-item-main">
-                <span className="todo-title">{todo.title}</span>
-                <TodoLabels todo={todo} />
-              </div>
-              <TodoMeta todo={todo} />
-              <button
-                className="todo-delete"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeTodo(listId, todo.id);
-                }}
-                title="Delete"
-              >
-                &times;
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Completed section */}
-      {completedTodos.length > 0 && (
-        <>
-          <div
-            className="nav-section-header"
-            style={{ paddingLeft: 0, marginTop: 24 }}
-          >
-            <span>
-              Completed ({completedTodos.length})
-            </span>
+        {isLoading && todos.length === 0 && (
+          <div style={{ padding: "20px 0", textAlign: "center" }}>
+            <span className="spinner" />
           </div>
+        )}
+
+        {todos.length > 0 && (
+          <div className="col-head">
+            <span />
+            <span className="col-title">title · tags</span>
+            <span className="col-prio">prio</span>
+            <span className="col-due">due</span>
+          </div>
+        )}
+
+        {incompleteTodos.length > 0 && (
           <div className="todo-items">
-            {completedTodos.map((todo) => (
-              <div
+            {incompleteTodos.map((todo) => (
+              <TodoRow
                 key={todo.id}
-                data-todo-id={todo.id}
-                className={`todo-item ${selectedTodoId === todo.id ? "selected" : ""} ${
-                  focusedTodoId === todo.id ? "focused" : ""
-                }`}
-                onClick={() => openTodo(todo.id)}
-              >
-                <button
-                  className="todo-checkbox checked"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleTodo(listId, todo.id);
-                  }}
-                />
-                <div className="todo-item-main">
-                  <span className="todo-title completed">{todo.title}</span>
-                  <TodoLabels todo={todo} />
-                </div>
-                <TodoMeta todo={todo} />
-                <button
-                  className="todo-delete"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeTodo(listId, todo.id);
-                  }}
-                  title="Delete"
-                >
-                  &times;
-                </button>
-              </div>
+                todo={todo}
+                selected={selectedTodoId === todo.id}
+                focused={focusedTodoId === todo.id}
+                completed={false}
+                onOpen={() => openTodo(todo.id)}
+                onToggle={() => toggleTodo(listId, todo.id)}
+                onDelete={() => removeTodo(listId, todo.id)}
+              />
             ))}
           </div>
-        </>
-      )}
+        )}
 
-      {/* Empty state */}
-      {!isLoading && todos.length === 0 && (
-        <div className="empty-state">
-          <div className="empty-icon">&#128221;</div>
-          <h3>No items yet</h3>
-          <p>Add your first item using the form above.</p>
-        </div>
-      )}
-    </div>
+        {todos.length > 0 && (
+          <div className="list-end">
+            ─ end of list · press <span className="accent">a</span> to add ─
+          </div>
+        )}
+
+        {completedTodos.length > 0 && (
+          <>
+            <div
+              className="nav-section-header"
+              style={{ paddingLeft: 16, paddingRight: 16, marginTop: 16 }}
+            >
+              <span>done ({completedTodos.length})</span>
+            </div>
+            <div className="todo-items">
+              {completedTodos.map((todo) => (
+                <TodoRow
+                  key={todo.id}
+                  todo={todo}
+                  selected={selectedTodoId === todo.id}
+                  focused={focusedTodoId === todo.id}
+                  completed
+                  onOpen={() => openTodo(todo.id)}
+                  onToggle={() => toggleTodo(listId, todo.id)}
+                  onDelete={() => removeTodo(listId, todo.id)}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
+        {!isLoading && todos.length === 0 && (
+          <div className="empty-state">
+            <div className="empty-icon">▱</div>
+            <h3>No items yet</h3>
+            <p>
+              Type above and hit <span className="accent">↵</span> to add your
+              first item.
+            </p>
+          </div>
+        )}
+      </div>
+    </>
   );
 }

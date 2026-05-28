@@ -19,7 +19,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useAuthStore } from "../stores/authStore";
 import { useTodoListsStore } from "../stores/todoListsStore";
 import { useNavigationStore } from "../stores/navigationStore";
-import { useThemeStore, type Theme } from "../stores/themeStore";
+import { useTodosStore } from "../stores/todosStore";
 import {
   clampSidebarWidth,
   SIDEBAR_DEFAULT_WIDTH,
@@ -88,31 +88,6 @@ function handleInlineAddKeyDown(
    SVG Icons
    ──────────────────────────────────────────────────────── */
 
-function SunIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="8" cy="8" r="3" />
-      <path d="M8 1.5v1.5M8 13v1.5M3.4 3.4l1.06 1.06M11.54 11.54l1.06 1.06M1.5 8H3M13 8h1.5M3.4 12.6l1.06-1.06M11.54 4.46l1.06-1.06" />
-    </svg>
-  );
-}
-
-function MoonIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M13.5 8.5a5.5 5.5 0 1 1-6-6 4.5 4.5 0 0 0 6 6z" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 7.5l3 3 5-6" />
-    </svg>
-  );
-}
-
 function LogOutIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -142,40 +117,14 @@ function UserMenu({
   onClose: () => void;
   onLogout: () => void;
 }) {
-  const { theme, setTheme } = useThemeStore();
   const menuRef = useRef<HTMLDivElement>(null);
 
   if (!isOpen) return null;
-
-  const themes: { value: Theme; label: string; icon: React.ReactNode }[] = [
-    { value: "light", label: "Light", icon: <SunIcon /> },
-    { value: "dark", label: "Dark", icon: <MoonIcon /> },
-  ];
 
   return (
     <>
       <div className="user-menu-overlay" onClick={onClose} />
       <div className="user-menu" ref={menuRef}>
-        <div className="user-menu-section">
-          <div className="user-menu-label">Theme</div>
-          {themes.map((t) => (
-            <button
-              key={t.value}
-              className="user-menu-item"
-              onClick={() => {
-                setTheme(t.value);
-              }}
-            >
-              <span className="user-menu-item-icon">{t.icon}</span>
-              <span className="user-menu-item-label">{t.label}</span>
-              {theme === t.value && (
-                <span className="user-menu-item-check">
-                  <CheckIcon />
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
         <div className="user-menu-section">
           <button
             className="user-menu-item danger"
@@ -417,6 +366,10 @@ function SortableListItem({
   const isRenaming = controller.renamingListId === list.id;
   const isOpen = controller.openListId === list.id;
   const isPopped = controller.poppedListId === list.id;
+  const openCount = useTodosStore((s) => {
+    const t = s.todosByList[list.id];
+    return t ? t.filter((x) => !x.completed).length : null;
+  });
 
   const iconRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -528,6 +481,9 @@ function SortableListItem({
               <UsersIcon size={12} />
             </span>
           )}
+          {openCount != null && openCount > 0 && (
+            <span className="nav-count">{openCount}</span>
+          )}
         </div>
       )}
     </div>
@@ -551,6 +507,10 @@ function SharedListRow({
   onSelect: () => void;
   onContextMenu: (e: React.MouseEvent) => void;
 }) {
+  const openCount = useTodosStore((s) => {
+    const t = s.todosByList[list.id];
+    return t ? t.filter((x) => !x.completed).length : null;
+  });
   return (
     <div className="nav-item-wrapper shared-row">
       <div
@@ -573,6 +533,9 @@ function SharedListRow({
         <span className="nav-item-shared" title="Shared with you">
           <UsersIcon size={12} />
         </span>
+        {openCount != null && openCount > 0 && (
+          <span className="nav-count">{openCount}</span>
+        )}
       </div>
     </div>
   );
@@ -1068,56 +1031,64 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`sidebar ${resizing ? "is-resizing" : ""}`}
+      className={`sidebar tui-pane ${resizing ? "is-resizing" : ""}`}
       style={{ width: sidebarWidth }}
     >
-      <div className="sidebar-titlebar" />
-
       {/* Right-edge resize handle (drag, double-click to reset, arrows) */}
       <div className="sidebar-resizer" {...resizeHandleProps}>
         <span className="sidebar-resizer-grip" aria-hidden="true" />
       </div>
 
+      <div className="pane-head">
+        <span className="pane-head__lead">─</span>
+        <span className="pane-head__tag">[1]</span>
+        <span className="pane-head__name">lists</span>
+        <span className="pane-head__rule" />
+        <div className="add-menu-wrapper" ref={addMenuRef}>
+          <button
+            className="pane-head-add"
+            onClick={() => setShowAddMenu(!showAddMenu)}
+            title="New list or section"
+          >
+            +
+          </button>
+          {showAddMenu && (
+            <div className="add-menu">
+              <button
+                onClick={() => {
+                  setAddingList(true);
+                  setAddingSection(false);
+                  setNewName("");
+                  setShowAddMenu(false);
+                }}
+              >
+                new list
+              </button>
+              <button
+                onClick={() => {
+                  setAddingSection(true);
+                  setAddingList(false);
+                  setNewName("");
+                  setShowAddMenu(false);
+                }}
+              >
+                new section
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="sidebar-content">
         {/* Today */}
-        <button
-          className={`nav-item today-btn ${currentView === "today" ? "active" : ""}`}
-          onClick={navigateToToday}
-        >
-          <span className="nav-icon">&#9788;</span>
-          Today
-        </button>
-
-        {/* Lists header */}
-        <div className="nav-section-header">
-          <span>Lists</span>
-          <div className="add-menu-wrapper" ref={addMenuRef}>
-            <button onClick={() => setShowAddMenu(!showAddMenu)}>+</button>
-            {showAddMenu && (
-              <div className="add-menu">
-                <button
-                  onClick={() => {
-                    setAddingList(true);
-                    setAddingSection(false);
-                    setNewName("");
-                    setShowAddMenu(false);
-                  }}
-                >
-                  New List
-                </button>
-                <button
-                  onClick={() => {
-                    setAddingSection(true);
-                    setAddingList(false);
-                    setNewName("");
-                    setShowAddMenu(false);
-                  }}
-                >
-                  New Section
-                </button>
-              </div>
-            )}
-          </div>
+        <div className="views-box">
+          <button
+            className={`nav-item today-btn ${currentView === "today" ? "active" : ""}`}
+            onClick={navigateToToday}
+          >
+            <span className="nav-icon">☼</span>
+            today
+          </button>
         </div>
 
         {/* Inline add list */}

@@ -17,14 +17,12 @@ export default function TodayView() {
     selectTodo(todoId, listId);
   };
 
-  // Fetch todos for all lists on mount
   useEffect(() => {
     lists.forEach((list) => {
       fetchTodos(list.id);
     });
   }, [lists, fetchTodos]);
 
-  // Collect all incomplete todos across all lists
   const todayTodos = lists.flatMap((list) => {
     const todos = todosByList[list.id] ?? [];
     return todos
@@ -39,106 +37,97 @@ export default function TodayView() {
       .map((t) => ({ ...t, listId: list.id, listName: list.name }));
   });
 
+  const renderRow = (
+    todo: (typeof todayTodos)[number],
+    completed: boolean,
+  ) => (
+    <div
+      key={todo.id}
+      data-todo-id={todo.id}
+      className={`todo-item ${selectedTodoId === todo.id ? "selected" : ""} ${
+        focusedTodoId === todo.id ? "focused" : ""
+      }`}
+      onClick={() => openTodo(todo.id, todo.listId)}
+    >
+      <button
+        className={`todo-checkbox ${completed ? "checked" : ""}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleTodo(todo.listId, todo.id);
+        }}
+        aria-label={completed ? "Mark incomplete" : "Mark complete"}
+      />
+      <div className="todo-item-main">
+        <span className={`todo-title ${completed ? "completed" : ""}`}>
+          {todo.title}
+        </span>
+        <TodoLabels todo={todo} />
+      </div>
+      <TodoMeta todo={todo} showDue={false} />
+      <span
+        className="todo-list-badge"
+        onClick={(e) => {
+          e.stopPropagation();
+          navigateToList(todo.listId);
+        }}
+      >
+        {todo.listName}
+      </span>
+    </div>
+  );
+
+  const hasAny = todayTodos.length > 0 || completedTodos.length > 0;
+
   return (
-    <div>
-      <div className="page-header">
-        <h2>Today</h2>
-        <div className="page-subtitle">
-          {todayTodos.length} task{todayTodos.length !== 1 ? "s" : ""} remaining
-        </div>
+    <>
+      <div className="pane-head">
+        <span className="pane-head__lead">─</span>
+        <span className="pane-head__tag">[2]</span>
+        <span className="pane-head__name">☼ today</span>
+        <span className="pane-head__rule" />
+        <span className="pane-head__meta">
+          <span className="accent">{todayTodos.length}</span> open
+        </span>
       </div>
 
-      {todayTodos.length === 0 && completedTodos.length === 0 && (
-        <div className="empty-state">
-          <div className="empty-icon">&#127793;</div>
-          <h3>All clear!</h3>
-          <p>Create a list and add some tasks to get started.</p>
-        </div>
-      )}
-
-      {todayTodos.length > 0 && (
-        <div className="todo-items">
-          {todayTodos.map((todo) => (
-            <div
-              key={todo.id}
-              data-todo-id={todo.id}
-              className={`todo-item ${selectedTodoId === todo.id ? "selected" : ""} ${
-                focusedTodoId === todo.id ? "focused" : ""
-              }`}
-              onClick={() => openTodo(todo.id, todo.listId)}
-            >
-              <button
-                className="todo-checkbox"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleTodo(todo.listId, todo.id);
-                }}
-              />
-              <div className="todo-item-main">
-                <span className="todo-title">{todo.title}</span>
-                <TodoLabels todo={todo} />
-              </div>
-              <TodoMeta todo={todo} />
-              <span
-                className="todo-list-badge"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigateToList(todo.listId);
-                }}
-              >
-                {todo.listName}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {completedTodos.length > 0 && (
-        <>
-          <div
-            className="nav-section-header"
-            style={{ paddingLeft: 0, marginTop: 24 }}
-          >
-            <span>
-              Completed ({completedTodos.length})
-            </span>
+      <div className="main-body">
+        {!hasAny && (
+          <div className="empty-state">
+            <div className="empty-icon">▱</div>
+            <h3>All clear</h3>
+            <p>Create a list and add some tasks to get started.</p>
           </div>
+        )}
+
+        {hasAny && (
+          <div className="col-head">
+            <span />
+            <span className="col-title">title · tags</span>
+            <span className="col-prio">prio</span>
+            <span className="col-due">list</span>
+          </div>
+        )}
+
+        {todayTodos.length > 0 && (
           <div className="todo-items">
-            {completedTodos.map((todo) => (
-              <div
-                key={todo.id}
-                data-todo-id={todo.id}
-                className={`todo-item ${selectedTodoId === todo.id ? "selected" : ""} ${
-                  focusedTodoId === todo.id ? "focused" : ""
-                }`}
-                onClick={() => openTodo(todo.id, todo.listId)}
-              >
-                <button
-                  className="todo-checkbox checked"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleTodo(todo.listId, todo.id);
-                  }}
-                />
-                <div className="todo-item-main">
-                  <span className="todo-title completed">{todo.title}</span>
-                  <TodoLabels todo={todo} />
-                </div>
-                <TodoMeta todo={todo} />
-                <span
-                  className="todo-list-badge"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigateToList(todo.listId);
-                  }}
-                >
-                  {todo.listName}
-                </span>
-              </div>
-            ))}
+            {todayTodos.map((todo) => renderRow(todo, false))}
           </div>
-        </>
-      )}
-    </div>
+        )}
+
+        {completedTodos.length > 0 && (
+          <>
+            <div
+              className="nav-section-header"
+              style={{ paddingLeft: 16, paddingRight: 16, marginTop: 16 }}
+            >
+              <span>done ({completedTodos.length})</span>
+            </div>
+            <div className="todo-items">
+              {completedTodos.map((todo) => renderRow(todo, true))}
+            </div>
+          </>
+        )}
+      </div>
+    </>
   );
 }

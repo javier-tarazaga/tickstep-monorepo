@@ -25,8 +25,8 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <h1>Welcome back</h1>
-        <p>Sign in to your account to continue</p>
+        <h1>tickstep</h1>
+        <p>authenticate to continue</p>
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
