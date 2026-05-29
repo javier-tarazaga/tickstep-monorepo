@@ -27,6 +27,7 @@ import {
   SIDEBAR_DEFAULT_WIDTH,
   SIDEBAR_MAX_WIDTH,
   SIDEBAR_MIN_WIDTH,
+  SIDEBAR_RAIL_WIDTH,
   usePanelStore,
 } from "../stores/panelStore";
 import type { ListSection } from "../stores/todoListsStore";
@@ -664,6 +665,8 @@ export default function Sidebar() {
     useNavigationStore();
   const openShareDialog = useShareDialogStore((s) => s.open);
   const activeSection = useUiStore((s) => s.activeSection);
+  const collapsed = usePanelStore((s) => s.sidebarCollapsed);
+  const setCollapsed = usePanelStore((s) => s.setSidebarCollapsed);
   const focusedListKey = useCommandStore((s) => s.focusedListKey);
   const kbdActive = activeSection === 1;
 
@@ -1046,6 +1049,28 @@ export default function Sidebar() {
     return null;
   }
 
+  if (collapsed) {
+    return (
+      <aside
+        className={`sidebar tui-pane is-collapsed ${kbdActive ? "is-active" : ""}`}
+        style={{ width: SIDEBAR_RAIL_WIDTH }}
+      >
+        <button
+          className="sidebar-rail"
+          onClick={() => setCollapsed(false)}
+          title="Expand lists ( [ )"
+          aria-label="Expand sidebar"
+          aria-expanded={false}
+        >
+          <span className="sidebar-rail__glyph" aria-hidden="true">
+            ›
+          </span>
+          <span className="sidebar-rail__label">lists</span>
+        </button>
+      </aside>
+    );
+  }
+
   return (
     <aside
       className={`sidebar tui-pane ${resizing ? "is-resizing" : ""} ${kbdActive ? "is-active" : ""}`}
@@ -1062,6 +1087,15 @@ export default function Sidebar() {
           <span className="pane-head__name">lists</span>
         </span>
         <span className="pane-head__actions">
+          <button
+            className="sidebar-collapse"
+            onClick={() => setCollapsed(true)}
+            title="Collapse panel ( [ )"
+            aria-label="Collapse sidebar"
+            aria-expanded={true}
+          >
+            |‹
+          </button>
           <div className="add-menu-wrapper" ref={addMenuRef}>
             <button
               className="pane-head-add"

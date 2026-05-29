@@ -4,6 +4,7 @@ import { useCommandStore } from "../stores/commandStore";
 import { useTodosStore } from "../stores/todosStore";
 import { useUiStore, type Section } from "../stores/uiStore";
 import { useViewModeStore } from "../stores/viewModeStore";
+import { usePanelStore } from "../stores/panelStore";
 import {
   getBoardGrid,
   getVisibleListOrder,
@@ -264,6 +265,10 @@ export function useGlobalShortcuts() {
       // their meaning and digits stay typeable inside fields above.
       if (!mod && (e.key === "1" || e.key === "2" || e.key === "3")) {
         e.preventDefault();
+        // Jumping straight to a side pane is an intent to use it, so reveal it
+        // if collapsed. Tab-cycling past it deliberately leaves it tucked.
+        if (e.key === "1") usePanelStore.getState().setSidebarCollapsed(false);
+        if (e.key === "3") usePanelStore.getState().setTaskPanelCollapsed(false);
         activateSection(Number(e.key) as Section);
         return;
       }
@@ -271,6 +276,18 @@ export function useGlobalShortcuts() {
       if (e.key === "?") {
         e.preventDefault();
         command.openHelp();
+        return;
+      }
+
+      // [ / ]: collapse or expand the side panes to free up the main view's width.
+      if (!mod && e.key === "[") {
+        e.preventDefault();
+        usePanelStore.getState().toggleSidebarCollapsed();
+        return;
+      }
+      if (!mod && e.key === "]") {
+        e.preventDefault();
+        usePanelStore.getState().toggleTaskPanelCollapsed();
         return;
       }
 

@@ -20,6 +20,8 @@ const SHORTCUTS: Shortcut[] = [
   { keys: ["↑", "↓"], description: "Move within the active pane" },
   { keys: ["Enter"], description: "Open the highlighted list or task" },
   { keys: ["Space"], description: "Mark the highlighted task complete" },
+  { keys: ["["], description: "Collapse or expand the sidebar" },
+  { keys: ["]"], description: "Collapse or expand the detail panel" },
   { keys: ["Esc"], description: "Close panel, palette, or dialog" },
   { keys: ["?"], description: "Show this help" },
 ];
