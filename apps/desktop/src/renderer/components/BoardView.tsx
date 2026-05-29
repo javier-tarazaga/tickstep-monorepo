@@ -276,7 +276,6 @@ function BoardColumnView({
   onOpen: (todoId: string) => void;
 }) {
   const renameColumn = useBoardColumnsStore((s) => s.renameColumn);
-  const setDoneColumn = useBoardColumnsStore((s) => s.setDoneColumn);
   const deleteColumn = useBoardColumnsStore((s) => s.deleteColumn);
   const addTodo = useTodosStore((s) => s.addTodo);
 
@@ -337,17 +336,6 @@ function BoardColumnView({
         )}
         <span className="board-col__count">{todoIds.length}</span>
         <span className="board-col__actions">
-          <button
-            className={`board-col__done ${column.isDone ? "is-done" : ""}`}
-            onClick={() => setDoneColumn(listId, column.id)}
-            title={
-              column.isDone
-                ? "This is the done column"
-                : "Make this the done column"
-            }
-          >
-            {column.isDone ? "✓ done" : "done"}
-          </button>
           <button
             className="board-col__del"
             onClick={() => deleteColumn(listId, column.id)}

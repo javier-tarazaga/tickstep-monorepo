@@ -7,6 +7,7 @@ import { useShareDialogStore } from "../stores/shareDialogStore";
 import { useViewModeStore } from "../stores/viewModeStore";
 import { realtimeClient } from "../realtime";
 import BoardView from "./BoardView";
+import BoardSettingsMenu from "./BoardSettingsMenu";
 import TodoMeta from "./TodoMeta";
 import TodoLabels from "./TodoLabels";
 
@@ -180,6 +181,7 @@ export default function ListView({ listId }: ListViewProps) {
           >
             {list.isShared ? `shared·${list.members.length}` : "share"}
           </button>
+          {viewMode === "board" && <BoardSettingsMenu listId={listId} />}
         </span>
       </div>
 

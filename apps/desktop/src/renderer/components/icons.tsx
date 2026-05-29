@@ -161,3 +161,13 @@ export function SmileIcon({ size = 16 }: IconProps) {
     </svg>
   );
 }
+
+export function DotsVerticalIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...svgProps(size)}>
+      <circle cx="8" cy="3.5" r="1.1" fill="currentColor" stroke="none" />
+      <circle cx="8" cy="8" r="1.1" fill="currentColor" stroke="none" />
+      <circle cx="8" cy="12.5" r="1.1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
