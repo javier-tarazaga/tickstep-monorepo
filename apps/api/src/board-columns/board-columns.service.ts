@@ -4,6 +4,7 @@ import type {
   CreateBoardColumnDto,
   UpdateBoardColumnDto,
 } from "@tickstep/shared-types";
+import { PrismaService } from "../prisma";
 import { RealtimeService } from "../realtime/realtime.service";
 import { TodoRepository } from "../todos/todo.repository";
 import {
@@ -19,9 +20,14 @@ const DEFAULT_COLUMNS: { name: string; isDone: boolean }[] = [
   { name: "Done", isDone: true },
 ];
 
+/** Arbitrary namespace for the seeding advisory lock, keeping it from colliding
+ *  with advisory locks taken elsewhere. */
+const SEED_LOCK_NAMESPACE = 0x42c0;
+
 @Injectable()
 export class BoardColumnsService {
   constructor(
+    private readonly prisma: PrismaService,
     private readonly columnRepository: BoardColumnRepository,
     private readonly todoRepository: TodoRepository,
     private readonly realtime: RealtimeService,
@@ -52,34 +58,66 @@ export class BoardColumnsService {
    * whenever a board is opened.
    */
   async ensureDefaults(listId: string): Promise<BoardColumn[]> {
-    if ((await this.columnRepository.countByListId(listId)) > 0) {
-      return this.findAll(listId);
-    }
+    // Seed inside a transaction guarded by a per-list advisory lock. Without it,
+    // two boards opening at once both read count === 0 and each insert the three
+    // defaults — producing duplicate Todo/Doing/Done columns. The lock serializes
+    // concurrent seeders (even across instances): the loser waits, then sees the
+    // columns already exist and skips. It's an xact-scoped lock, so it's pinned
+    // to this transaction's connection and released on commit — safe under the
+    // transaction-pooled Supabase connection.
+    const created = await this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${SEED_LOCK_NAMESPACE}::int, hashtext(${listId}))`;
 
-    const created: BoardColumnRow[] = [];
-    for (const [i, def] of DEFAULT_COLUMNS.entries()) {
-      created.push(
-        await this.columnRepository.create(listId, {
-          name: def.name,
-          position: i,
-          isDone: def.isDone,
-        }),
-      );
-    }
+      if ((await this.columnRepository.countByListId(listId, tx)) > 0) {
+        return null; // a racing request already seeded this list
+      }
 
-    const firstColumn = created.find((c) => !c.isDone);
-    const doneColumn = created.find((c) => c.isDone);
-    if (firstColumn && doneColumn) {
-      const placements = await this.todoRepository.findPlacementByListId(listId);
-      let firstPos = 0;
-      let donePos = 0;
-      for (const todo of placements) {
-        if (todo.completed) {
-          await this.todoRepository.assignColumn(todo.id, doneColumn.id, donePos++);
-        } else {
-          await this.todoRepository.assignColumn(todo.id, firstColumn.id, firstPos++);
+      const cols: BoardColumnRow[] = [];
+      for (const [i, def] of DEFAULT_COLUMNS.entries()) {
+        cols.push(
+          await this.columnRepository.create(
+            listId,
+            { name: def.name, position: i, isDone: def.isDone },
+            tx,
+          ),
+        );
+      }
+
+      const firstColumn = cols.find((c) => !c.isDone);
+      const doneColumn = cols.find((c) => c.isDone);
+      if (firstColumn && doneColumn) {
+        const placements = await this.todoRepository.findPlacementByListId(
+          listId,
+          tx,
+        );
+        let firstPos = 0;
+        let donePos = 0;
+        for (const todo of placements) {
+          if (todo.completed) {
+            await this.todoRepository.assignColumn(
+              todo.id,
+              doneColumn.id,
+              donePos++,
+              undefined,
+              tx,
+            );
+          } else {
+            await this.todoRepository.assignColumn(
+              todo.id,
+              firstColumn.id,
+              firstPos++,
+              undefined,
+              tx,
+            );
+          }
         }
       }
+
+      return cols;
+    });
+
+    if (created === null) {
+      return this.findAll(listId);
     }
 
     await this.broadcast(listId);

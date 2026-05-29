@@ -27,28 +27,45 @@ interface BoardColumnsState {
 const byPosition = (a: BoardColumn, b: BoardColumn) =>
   a.position - b.position || a.createdAt.localeCompare(b.createdAt);
 
+/** In-flight ensureDefaults requests keyed by listId. A board can mount twice in
+ *  quick succession (StrictMode double-effect, remounts), and two concurrent
+ *  seed requests would each create a full set of default columns. Sharing the
+ *  promise collapses them into a single request. Lives outside the store so it
+ *  never triggers a re-render. */
+const ensureInFlight = new Map<string, Promise<void>>();
+
 export const useBoardColumnsStore = create<BoardColumnsState>((set, get) => ({
   columnsByList: {},
   isLoading: false,
   error: null,
 
   ensureDefaults: async (listId) => {
+    const existing = ensureInFlight.get(listId);
+    if (existing) return existing;
+
     set({ isLoading: true, error: null });
-    try {
-      const res = await apiClient.ensureDefaultColumns(listId);
-      set((state) => ({
-        columnsByList: {
-          ...state.columnsByList,
-          [listId]: [...res.data].sort(byPosition),
-        },
-        isLoading: false,
-      }));
-    } catch (err) {
-      set({
-        error: err instanceof Error ? err.message : "Failed to set up board",
-        isLoading: false,
-      });
-    }
+    const request = (async () => {
+      try {
+        const res = await apiClient.ensureDefaultColumns(listId);
+        set((state) => ({
+          columnsByList: {
+            ...state.columnsByList,
+            [listId]: [...res.data].sort(byPosition),
+          },
+          isLoading: false,
+        }));
+      } catch (err) {
+        set({
+          error: err instanceof Error ? err.message : "Failed to set up board",
+          isLoading: false,
+        });
+      } finally {
+        ensureInFlight.delete(listId);
+      }
+    })();
+
+    ensureInFlight.set(listId, request);
+    return request;
   },
 
   createColumn: async (listId, name) => {

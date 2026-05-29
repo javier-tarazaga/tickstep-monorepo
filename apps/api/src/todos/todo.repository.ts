@@ -7,6 +7,10 @@ const TODO_INCLUDE = { todoLabels: { include: { label: true } } } as const;
 
 export type TodoRow = Prisma.TodoGetPayload<{ include: typeof TODO_INCLUDE }>;
 
+/** Either the pooled client or an open transaction — lets default-column
+ *  seeding place existing cards inside the same `$transaction`. */
+type Db = PrismaService | Prisma.TransactionClient;
+
 export interface TodoFilterParams {
   completed?: boolean;
   search?: string;
@@ -149,8 +153,9 @@ export class TodoRepository {
    *  oldest first — used when seeding default columns. */
   async findPlacementByListId(
     todoListId: string,
+    db: Db = this.prisma,
   ): Promise<{ id: string; completed: boolean }[]> {
-    return this.prisma.todo.findMany({
+    return db.todo.findMany({
       where: { todoListId },
       select: { id: true, completed: true },
       orderBy: { createdAt: "asc" },
@@ -165,8 +170,9 @@ export class TodoRepository {
     columnId: string | null,
     position: number | null,
     completed?: boolean,
+    db: Db = this.prisma,
   ): Promise<void> {
-    await this.prisma.todo.update({
+    await db.todo.update({
       where: { id },
       data: {
         columnId,

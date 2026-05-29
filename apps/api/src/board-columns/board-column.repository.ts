@@ -1,8 +1,12 @@
 import { Injectable } from "@nestjs/common";
-import type { BoardColumn as BoardColumnRow } from "@prisma/client";
+import type { BoardColumn as BoardColumnRow, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma";
 
 export type { BoardColumnRow };
+
+/** Either the pooled client or an open transaction — lets seeding run the
+ *  count + creates atomically inside one `$transaction`. */
+type Db = PrismaService | Prisma.TransactionClient;
 
 export interface CreateBoardColumnData {
   name: string;
@@ -32,15 +36,16 @@ export class BoardColumnRepository {
     return this.prisma.boardColumn.findFirst({ where: { id, listId } });
   }
 
-  async countByListId(listId: string): Promise<number> {
-    return this.prisma.boardColumn.count({ where: { listId } });
+  async countByListId(listId: string, db: Db = this.prisma): Promise<number> {
+    return db.boardColumn.count({ where: { listId } });
   }
 
   async create(
     listId: string,
     data: CreateBoardColumnData,
+    db: Db = this.prisma,
   ): Promise<BoardColumnRow> {
-    return this.prisma.boardColumn.create({
+    return db.boardColumn.create({
       data: {
         listId,
         name: data.name,
