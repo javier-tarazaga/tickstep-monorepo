@@ -10,6 +10,7 @@ import {
   TASK_PANEL_DEFAULT_WIDTH,
   TASK_PANEL_MAX_WIDTH,
   TASK_PANEL_MIN_WIDTH,
+  TASK_PANEL_RAIL_WIDTH,
   usePanelStore,
 } from "../stores/panelStore";
 import {
@@ -152,13 +153,44 @@ export default function TaskDetailPanel() {
 
   const fetchLabels = useLabelsStore((s) => s.fetchLabels);
   const activeSection = useUiStore((s) => s.activeSection);
+  const collapsed = usePanelStore((s) => s.taskPanelCollapsed);
+  const setCollapsed = usePanelStore((s) => s.setTaskPanelCollapsed);
   const { width, dragging, handleProps } = useTaskPanelResize();
 
   useEffect(() => {
     fetchLabels();
   }, [fetchLabels]);
 
+  // Opening a task is a "show me the details" gesture, so reveal the pane if the
+  // user had it tucked away. Runs only when the selection changes — collapsing
+  // while a task stays open does not re-trigger this.
+  useEffect(() => {
+    if (selectedTodoId) setCollapsed(false);
+  }, [selectedTodoId, setCollapsed]);
+
   const active = todo && selectedTodoListId;
+
+  if (collapsed) {
+    return (
+      <aside
+        className={`task-panel tui-pane pane--right is-collapsed ${activeSection === 3 ? "is-active" : ""}`}
+        style={{ width: TASK_PANEL_RAIL_WIDTH }}
+      >
+        <button
+          className="task-panel-rail"
+          onClick={() => setCollapsed(false)}
+          title="Expand details ( ] )"
+          aria-label="Expand detail panel"
+          aria-expanded={false}
+        >
+          <span className="task-panel-rail__glyph" aria-hidden="true">
+            ‹
+          </span>
+          <span className="task-panel-rail__label">detail</span>
+        </button>
+      </aside>
+    );
+  }
 
   return (
     <aside
@@ -174,8 +206,8 @@ export default function TaskDetailPanel() {
           <span className="pane-head__tag">[3]</span>
           <span className="pane-head__name">detail</span>
         </span>
-        {active && (
-          <span className="pane-head__actions">
+        <span className="pane-head__actions">
+          {active && (
             <button
               className="task-panel-close"
               onClick={closeTodo}
@@ -184,8 +216,17 @@ export default function TaskDetailPanel() {
             >
               esc
             </button>
-          </span>
-        )}
+          )}
+          <button
+            className="task-panel-collapse"
+            onClick={() => setCollapsed(true)}
+            title="Collapse panel ( ] )"
+            aria-label="Collapse detail panel"
+            aria-expanded={true}
+          >
+            ›|
+          </button>
+        </span>
       </div>
 
       {active ? (
@@ -237,6 +278,8 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
   const [deletingLabelId, setDeletingLabelId] = useState<string | null>(null);
 
   const descRef = useRef<HTMLTextAreaElement>(null);
+  const titleRef = useRef<HTMLTextAreaElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => setTitle(todo.title), [todo.title]);
   useEffect(() => setDescription(todo.description ?? ""), [todo.description]);
@@ -250,6 +293,34 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
       el.scrollHeight > MAX_DESCRIPTION_HEIGHT ? "auto" : "hidden";
   };
   useLayoutEffect(grow, [description]);
+
+  // The title wraps instead of clipping: a one-row textarea that auto-grows to
+  // fit its content, so long titles stay fully visible without scrolling.
+  const growTitle = () => {
+    const el = titleRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  };
+  useLayoutEffect(growTitle, [title]);
+
+  // Both fields size themselves from scrollHeight, which depends on the pane's
+  // width. The pane animates its width (transition: width 0.16s) on the
+  // collapsed→expanded entrance, so the layout-effect measurements above run
+  // while it's still narrow — a short title wraps into many lines and the box
+  // is left inflated until the body remounts. Re-measure on every width change
+  // (entrance transition, drag-resize, window resize). Observing the content
+  // container rather than the textareas avoids a measure→resize→measure loop.
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      growTitle();
+      grow();
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   /* Esc closes the open popover first, then the panel. */
   useEffect(() => {
@@ -354,17 +425,19 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
 
   return (
     <>
-      <div className="task-panel-content">
+      <div className="task-panel-content" ref={contentRef}>
         {/* ITEM */}
         <div className="detail-item">
-          <div className="detail-label">item</div>
+          <div className="detail-label detail-label--ruled">item</div>
           <div className="task-title-row">
             <button
               className={`task-checkbox ${todo.completed ? "checked" : ""}`}
               onClick={() => toggleTodo(listId, todo.id)}
               aria-label={todo.completed ? "Mark incomplete" : "Mark complete"}
             />
-            <input
+            <textarea
+              ref={titleRef}
+              rows={1}
               className={`task-title-input ${todo.completed ? "completed" : ""}`}
               value={title}
               placeholder="Untitled task"
@@ -387,12 +460,13 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
 
         {/* FIELDS */}
         <div className="detail-fields">
+          <div className="detail-label detail-label--ruled">meta</div>
           {/* status */}
           <div className="field-row">
             <span className="field-key">status</span>
             <span className="field-val">
               <button
-                className="status-toggle"
+                className={`status-toggle ${todo.completed ? "is-done" : ""}`}
                 onClick={() => toggleTodo(listId, todo.id)}
               >
                 <span
@@ -411,7 +485,7 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
             <span className="field-val">
               <div className="task-chip-wrap">
                 <button
-                  className={`task-chip ${pri ? "is-set" : ""}`}
+                  className={`task-chip prio-chip prio-${todo.priority ?? "none"} ${pri ? "is-set" : ""}`}
                   onClick={() => setOpen(open === "priority" ? null : "priority")}
                 >
                   {pri ? (
@@ -722,7 +796,7 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
 
         {/* NOTE */}
         <div className="detail-section">
-          <div className="detail-label">note</div>
+          <div className="detail-label detail-label--ruled">note</div>
           <textarea
             ref={descRef}
             className="task-description-input"

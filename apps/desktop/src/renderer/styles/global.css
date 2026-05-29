@@ -415,6 +415,33 @@ body {
   border-color: var(--amber);
 }
 
+/* collapse affordance in the lists pane head (mirrors .task-panel-collapse) */
+.sidebar-collapse {
+  -webkit-app-region: no-drag;
+  background: none;
+  border: 1px solid var(--frame);
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  cursor: pointer;
+  transition:
+    color 0.12s,
+    border-color 0.12s;
+}
+.sidebar-collapse:hover {
+  color: var(--amber);
+  border-color: var(--amber);
+}
+.sidebar-collapse:focus-visible {
+  outline: none;
+  color: var(--amber-bright);
+  border-color: var(--amber);
+  box-shadow: 0 0 0 1px var(--amber-line);
+}
+
 /* ══════════════════════════════════════════════════════════════
    Sidebar  — pane [1] Lists
    ══════════════════════════════════════════════════════════════ */
@@ -425,6 +452,62 @@ body {
 }
 .sidebar.is-resizing {
   transition: none;
+}
+
+/* ── Collapsed rail ───────────────────────────────────────────────
+   Mirror of the detail pane's rail, flipped to the left edge. Collapsed, the
+   sidebar shrinks to a thin strip and the main view reflows to full width via
+   the existing flex layout and the width transition on .sidebar. The rail is
+   one big button that expands again; its chevron points right, toward the
+   content it reveals. */
+.sidebar.is-collapsed {
+  overflow: hidden;
+}
+.sidebar.is-collapsed:hover {
+  border-color: var(--frame-bright);
+}
+.sidebar-rail {
+  -webkit-app-region: no-drag;
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--mono);
+}
+.sidebar-rail__glyph {
+  font-size: 14px;
+  line-height: 1;
+  color: var(--amber);
+  transition:
+    transform 0.14s ease,
+    color 0.12s ease;
+}
+.sidebar-rail__label {
+  writing-mode: vertical-rl;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  transition: color 0.12s ease;
+}
+.sidebar-rail:hover .sidebar-rail__glyph,
+.sidebar-rail:focus-visible .sidebar-rail__glyph {
+  color: var(--amber-bright);
+  transform: translateX(2px);
+}
+.sidebar-rail:hover .sidebar-rail__label,
+.sidebar-rail:focus-visible .sidebar-rail__label {
+  color: var(--ink-dim);
+}
+.sidebar-rail:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--amber-line);
 }
 
 .sidebar-content {
@@ -1393,6 +1476,100 @@ body {
   border-color: var(--amber-line);
 }
 
+/* ── Board settings (⋮) ────────────────────────────────────── */
+.board-settings {
+  display: inline-flex;
+}
+.board-settings__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 5px;
+  color: var(--ink-faint);
+  background: transparent;
+  border: 1px solid var(--frame);
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  transition: color 0.12s, border-color 0.12s;
+}
+.board-settings__btn:hover,
+.board-settings__btn.is-open {
+  color: var(--amber);
+  border-color: var(--amber);
+}
+.board-settings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 309;
+}
+.board-settings-panel {
+  position: fixed;
+  z-index: 310;
+  min-width: 200px;
+  padding: 8px;
+  background: var(--pane-raise);
+  border: 1px solid var(--frame-bright);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.55);
+  transform-origin: top right;
+  animation: popoverIn 0.12s ease-out;
+}
+.board-settings__section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.board-settings__label {
+  padding: 2px 6px 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.board-settings__hint {
+  padding: 2px 6px 4px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ink-ghost);
+}
+.board-settings__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--ink-dim);
+  text-align: left;
+  transition: background 0.1s, color 0.1s;
+}
+.board-settings__item:hover {
+  background: var(--sel-bg);
+  color: var(--ink);
+}
+.board-settings__item.is-active {
+  color: var(--amber);
+}
+.board-settings__item-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.board-settings__check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  flex-shrink: 0;
+  color: var(--amber);
+}
+
 /* ── Empty state ───────────────────────────────────────────── */
 .empty-state {
   display: flex;
@@ -1456,6 +1633,61 @@ body {
   transition: none;
 }
 
+/* ── Collapsed rail ───────────────────────────────────────────────
+   When collapsed the pane shrinks to a thin strip; the main view reflows
+   to full width through the existing flex layout and the width transition
+   already on .task-panel. The rail is one big button that expands again. */
+.task-panel.is-collapsed {
+  overflow: hidden;
+}
+.task-panel.is-collapsed:hover {
+  border-color: var(--frame-bright);
+}
+.task-panel-rail {
+  -webkit-app-region: no-drag;
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--mono);
+}
+.task-panel-rail__glyph {
+  font-size: 14px;
+  line-height: 1;
+  color: var(--amber);
+  transition:
+    transform 0.14s ease,
+    color 0.12s ease;
+}
+.task-panel-rail__label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  transition: color 0.12s ease;
+}
+.task-panel-rail:hover .task-panel-rail__glyph,
+.task-panel-rail:focus-visible .task-panel-rail__glyph {
+  color: var(--amber-bright);
+  transform: translateX(-2px);
+}
+.task-panel-rail:hover .task-panel-rail__label,
+.task-panel-rail:focus-visible .task-panel-rail__label {
+  color: var(--ink-dim);
+}
+.task-panel-rail:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--amber-line);
+}
+
 /* left-edge resize handle */
 .task-panel-resizer {
   position: absolute;
@@ -1499,7 +1731,7 @@ body {
 .task-panel-content {
   flex: 1;
   overflow-y: auto;
-  padding: 14px 16px 20px;
+  padding: 0 16px 20px;
 }
 .task-panel-content > * {
   animation: fieldRise 0.3s ease-out backwards;
@@ -1551,19 +1783,36 @@ body {
   color: var(--amber);
 }
 
-/* small block label, e.g. ITEM / NOTE / LIST PROGRESS / QUICK */
+/* small block label, e.g. ITEM / META / NOTE — a terminal section marker */
 .detail-label {
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--amber);
   margin: 0 0 6px;
+}
+/* labelled box-drawing rule: `META ──────────────────` */
+.detail-label--ruled {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.detail-label--ruled::before {
+  content: "■";
+  font-size: 6px;
+  line-height: 1;
+  color: var(--amber);
+  transform: translateY(-1px);
+}
+.detail-label--ruled::after {
+  content: "";
+  flex: 1;
+  height: 0;
+  border-top: 1px solid var(--frame);
 }
 .detail-section {
   margin-top: 18px;
-  padding-top: 14px;
-  border-top: 1px solid var(--frame);
 }
 
 /* title row */
@@ -1602,9 +1851,15 @@ body {
 }
 .task-title-input {
   flex: 1;
+  min-width: 0;
+  display: block;
   border: none;
   background: none;
   outline: none;
+  resize: none;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   font-family: var(--mono);
   font-size: 15px;
   font-weight: 600;
@@ -2024,10 +2279,10 @@ body {
   width: 8px;
 }
 
-/* field rows (status / prio / due / tags / list) */
+/* field rows (status / prio / due / tags / list) — a scannable gauge readout */
 .field-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
   padding: 3px 0;
   font-size: 12.5px;
@@ -2035,9 +2290,11 @@ body {
 .field-key {
   width: 52px;
   flex-shrink: 0;
-  color: var(--ink-faint);
-  text-transform: lowercase;
-  letter-spacing: 0.04em;
+  color: var(--ink-ghost);
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
 }
 .field-val {
   color: var(--ink-dim);
@@ -2045,21 +2302,25 @@ body {
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
+  font-size: 12.5px;
 }
 .field-val.muted {
   color: var(--ink-ghost);
 }
 .field-val .tag {
   color: var(--teal);
+  font-weight: 600;
 }
 .field-val .tag::before {
   content: "#";
-  opacity: 0.6;
+  opacity: 0.55;
 }
 .field-val .path {
-  color: var(--ink-dim);
+  color: var(--ink-faint);
+  font-size: 12px;
 }
 .status-glyph {
+  font-size: 12.5px;
   color: var(--ink-faint);
 }
 .status-glyph.done {
@@ -2110,12 +2371,53 @@ body {
   display: none;
 }
 
-/* detail item + field block spacing */
+/* collapse affordance in the detail pane head (mirrors .task-panel-close) */
+.task-panel-collapse {
+  -webkit-app-region: no-drag;
+  background: none;
+  border: 1px solid var(--frame);
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  cursor: pointer;
+  transition:
+    color 0.12s,
+    border-color 0.12s;
+}
+.task-panel-collapse:hover {
+  color: var(--amber);
+  border-color: var(--amber);
+}
+.task-panel-collapse:focus-visible {
+  outline: none;
+  color: var(--amber-bright);
+  border-color: var(--amber);
+  box-shadow: 0 0 0 1px var(--amber-line);
+}
+
+/* detail item — the hero band, pinned to the top so the title stays visible
+   while the meta gauges + note scroll beneath it. Negative margins cancel the
+   scroll container's padding so it sits flush and masks content scrolling under. */
+.detail-item {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--pane);
+  margin: -8px -16px 0;
+  padding: 8px 16px 12px;
+  border-bottom: 1px solid var(--frame);
+}
 .detail-item .detail-label {
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 .detail-fields {
-  margin-top: 16px;
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 }
 .status-toggle {
   background: none;
@@ -2123,19 +2425,52 @@ body {
   padding: 0;
   font-family: var(--mono);
   font-size: 12.5px;
-  color: var(--ink-dim);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   transition: color 0.12s;
 }
+.status-toggle.is-done {
+  color: var(--green);
+}
 .status-toggle:hover {
+  color: var(--ink);
+}
+.status-toggle.is-done:hover {
   color: var(--ink);
 }
 .field-row .task-chip-wrap .task-chip {
   height: 22px;
   padding: 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+/* priority gauge — severity-coded when set */
+.field-row .prio-chip.is-set.prio-high {
+  color: var(--red);
+  border-color: var(--red-deep);
+}
+.field-row .prio-chip.is-set.prio-medium {
+  color: var(--amber);
+  border-color: var(--amber-line);
+}
+.field-row .prio-chip.is-set.prio-low {
+  color: var(--blue);
+  border-color: rgba(143, 155, 212, 0.45);
+}
+
+/* due gauge — overdue is loud and unmistakable */
+.field-row .task-chip.is-overdue {
+  color: var(--red);
+  border-color: var(--red-deep);
+  background: var(--red-glow);
 }
 
 /* footer */
@@ -2937,35 +3272,18 @@ body {
   opacity: 0;
   transition: opacity 0.12s;
 }
-.board-col:hover .board-col__actions,
-.board-col--done .board-col__actions {
+.board-col:hover .board-col__actions {
   opacity: 1;
 }
-.board-col__done,
 .board-col__del {
   font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 12px;
   color: var(--ink-faint);
   background: transparent;
-  border: 1px solid var(--frame);
-  padding: 1px 5px;
-  cursor: pointer;
-  transition: color 0.12s, border-color 0.12s;
-}
-.board-col__done:hover {
-  color: var(--amber);
-  border-color: var(--amber);
-}
-.board-col__done.is-done {
-  color: var(--amber);
-  border-color: var(--amber-line);
-}
-.board-col__del {
   border: none;
-  font-size: 12px;
   padding: 1px 3px;
+  cursor: pointer;
+  transition: color 0.12s;
 }
 .board-col__del:hover {
   color: var(--red);
