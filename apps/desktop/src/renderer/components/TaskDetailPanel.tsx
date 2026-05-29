@@ -31,8 +31,6 @@ import {
   timeAgo,
 } from "../lib/taskDetail";
 
-const PROGRESS_CELLS = 16;
-
 function slug(name: string): string {
   return (
     name
@@ -217,7 +215,6 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
   const closeTodo = useNavigationStore((s) => s.closeTodo);
   const { updateTodo, toggleTodo, addLabelToTodo, removeLabelFromTodo } =
     useTodosStore();
-  const listTodos = useTodosStore((s) => s.todosByList[listId] ?? []);
   const labels = useLabelsStore((s) => s.labels);
   const createLabel = useLabelsStore((s) => s.createLabel);
   const updateLabel = useLabelsStore((s) => s.updateLabel);
@@ -350,10 +347,6 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
   const pri = priorityMeta(todo.priority);
   const dueOverdue =
     todo.dueDate != null && !todo.completed && isOverdue(todo.dueDate);
-
-  const done = listTodos.filter((t) => t.completed).length;
-  const total = listTodos.length;
-  const filled = total ? Math.round((done / total) * PROGRESS_CELLS) : 0;
 
   const listPath = listName
     ? `~/lists/${slug(listName)}`
@@ -745,23 +738,6 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
               }
             }}
           />
-        </div>
-
-        {/* LIST PROGRESS */}
-        <div className="detail-section">
-          <div className="detail-label">list progress</div>
-          <div className="progress-bar">
-            <span className="progress-cells">
-              {Array.from({ length: PROGRESS_CELLS }).map((_, i) => (
-                <span key={i} className={i < filled ? "on" : ""}>
-                  {i < filled ? "▰" : "▱"}
-                </span>
-              ))}
-            </span>
-            <span className="progress-count">
-              <span className="accent">{done}</span>/{total}
-            </span>
-          </div>
         </div>
       </div>
 
