@@ -28,10 +28,10 @@
   --frame-bright: #44505c;
 
   /* ink — blue-grey */
-  --ink: #c6cdd5; /* primary text */
-  --ink-dim: #8a929c; /* secondary */
-  --ink-faint: #5e6770; /* labels, meta */
-  --ink-ghost: #3a424c; /* placeholders, rules, disabled */
+  --ink: #f4f7fa; /* primary text */
+  --ink-dim: #c4ccd6; /* secondary */
+  --ink-faint: #939dab; /* labels, meta */
+  --ink-ghost: #5a626d; /* placeholders, rules, disabled */
 
   /* primary accent — steel blue (legacy --amber* names kept) */
   --amber: #7aa2c2;
