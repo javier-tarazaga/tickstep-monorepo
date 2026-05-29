@@ -30,7 +30,7 @@ interface CommandGroup {
 export default function CommandPalette() {
   const { paletteOpen, paletteMode, closePalette, openHelp, requestAddTaskFocus } =
     useCommandStore();
-  const { lists } = useTodoListsStore();
+  const { lists, sections } = useTodoListsStore();
   const { todosByList } = useTodosStore();
   const { navigateToToday, navigateToList, selectTodo, currentView, selectedListId } =
     useNavigationStore();
@@ -55,6 +55,18 @@ export default function CommandPalette() {
     navigateToList(listId);
     requestAddTaskFocus(listId);
   };
+
+  // Map each list to the name of the section it lives in, so lists with
+  // duplicate names (e.g. two "ToDo" lists) can be told apart in the palette.
+  const sectionNameByListId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const section of sections) {
+      for (const listId of section.listIds) {
+        map.set(listId, section.name);
+      }
+    }
+    return map;
+  }, [sections]);
 
   const groups = useMemo<CommandGroup[]>(() => {
     if (paletteMode === "newTask") {
@@ -108,13 +120,17 @@ export default function CommandPalette() {
       );
     }
 
-    const listItems: CommandItem[] = lists.map((list) => ({
-      id: `list-${list.id}`,
-      label: list.name,
-      keywords: "open list navigate",
-      icon: <ListIcon size={15} />,
-      run: () => navigateToList(list.id),
-    }));
+    const listItems: CommandItem[] = lists.map((list) => {
+      const sectionName = sectionNameByListId.get(list.id);
+      return {
+        id: `list-${list.id}`,
+        label: list.name,
+        hint: sectionName,
+        keywords: `open list navigate ${sectionName ?? ""}`,
+        icon: <ListIcon size={15} />,
+        run: () => navigateToList(list.id),
+      };
+    });
 
     const taskItems: CommandItem[] = lists.flatMap((list) =>
       (todosByList[list.id] ?? [])
@@ -136,7 +152,7 @@ export default function CommandPalette() {
     ];
     // navigate*/select* are stable Zustand actions; lists/todos drive the content.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paletteMode, lists, todosByList, currentView, selectedListId]);
+  }, [paletteMode, lists, sectionNameByListId, todosByList, currentView, selectedListId]);
 
   // Filter by case-insensitive substring across label, hint, and keywords.
   const filteredGroups = useMemo<CommandGroup[]>(() => {
