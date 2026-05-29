@@ -41,14 +41,14 @@
   --amber-line: rgba(122, 162, 194, 0.35);
   --on-amber: #07101a;
 
-  /* semantic */
-  --teal: #6faea2; /* tags */
-  --teal-dim: rgba(111, 174, 162, 0.16);
-  --red: #e0685c; /* high priority / overdue / danger */
-  --red-deep: #b8463c;
-  --red-glow: rgba(224, 104, 92, 0.14);
-  --green: #8fbf88; /* done / success */
-  --blue: #6f7d8b; /* low priority — muted slate, distinct from accent */
+  /* semantic — brightened to pop against the black panes (all ≥7:1 on #000) */
+  --teal: #5fd0bd; /* tags */
+  --teal-dim: rgba(95, 208, 189, 0.18);
+  --red: #f4796b; /* high priority / overdue / danger */
+  --red-deep: #cf5447;
+  --red-glow: rgba(244, 121, 107, 0.16);
+  --green: #9ad98f; /* done / success */
+  --blue: #8f9bd4; /* low priority — periwinkle, saturated but distinct from accent */
 
   /* selection */
   --sel-bg: #16212b;
