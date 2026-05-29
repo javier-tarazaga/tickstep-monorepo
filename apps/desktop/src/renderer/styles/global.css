@@ -2006,7 +2006,7 @@ body {
   font-family: var(--mono);
   font-size: 12.5px;
   line-height: 1.6;
-  color: var(--ink-dim);
+  color: var(--ink);
   padding: 4px;
   margin: -4px;
   overflow-y: hidden;
