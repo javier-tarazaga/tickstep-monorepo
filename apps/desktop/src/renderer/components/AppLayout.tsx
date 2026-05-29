@@ -25,6 +25,7 @@ const KEY_HINTS: { k: string; d: string }[] = [
   { k: "tab", d: "cycle" },
   { k: "↑↓", d: "move" },
   { k: "space", d: "toggle" },
+  { k: "v", d: "view" },
   { k: "↵", d: "open" },
   { k: `${MOD}K`, d: "cmd" },
   { k: `${MOD}N`, d: "add" },

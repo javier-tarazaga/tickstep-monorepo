@@ -19,6 +19,9 @@ export interface CreateTodoData {
   description: string | null;
   dueDate: Date | null;
   priority: string | null;
+  completed?: boolean;
+  columnId?: string | null;
+  position?: number | null;
 }
 
 export interface UpdateTodoData {
@@ -27,6 +30,8 @@ export interface UpdateTodoData {
   completed?: boolean;
   dueDate?: Date | null;
   priority?: string | null;
+  columnId?: string | null;
+  position?: number | null;
 }
 
 @Injectable()
@@ -82,6 +87,9 @@ export class TodoRepository {
         description: data.description,
         dueDate: data.dueDate,
         priority: data.priority,
+        completed: data.completed ?? false,
+        columnId: data.columnId ?? null,
+        position: data.position ?? null,
       },
       include: TODO_INCLUDE,
     });
@@ -92,12 +100,15 @@ export class TodoRepository {
     todoListId: string,
     data: UpdateTodoData,
   ): Promise<TodoRow | null> {
-    const updateData: Prisma.TodoUpdateInput = {};
+    const updateData: Prisma.TodoUncheckedUpdateManyInput = {};
     if (data.title !== undefined) updateData.title = data.title;
     if (data.description !== undefined) updateData.description = data.description;
     if (data.completed !== undefined) updateData.completed = data.completed;
     if (data.dueDate !== undefined) updateData.dueDate = data.dueDate;
     if (data.priority !== undefined) updateData.priority = data.priority;
+    if (data.position !== undefined) updateData.position = data.position;
+    // Raw FK assignment; null detaches the task from any column.
+    if (data.columnId !== undefined) updateData.columnId = data.columnId;
 
     if (Object.keys(updateData).length === 0) {
       return this.findById(id, todoListId);
@@ -118,16 +129,62 @@ export class TodoRepository {
     return count > 0;
   }
 
-  async toggle(id: string, todoListId: string): Promise<TodoRow | null> {
-    const existing = await this.findById(id, todoListId);
-    if (!existing) {
-      return null;
-    }
-    return this.prisma.todo.update({
-      where: { id },
-      data: { completed: !existing.completed },
-      include: TODO_INCLUDE,
+  /** Highest `position` among todos in a column, or null when the column is
+   *  empty. */
+  async maxPositionInColumn(columnId: string): Promise<number | null> {
+    const result = await this.prisma.todo.aggregate({
+      where: { columnId },
+      _max: { position: true },
     });
+    return result._max.position;
+  }
+
+  /** The position to append a card at the end of a column. */
+  async nextPositionInColumn(columnId: string): Promise<number> {
+    const max = await this.maxPositionInColumn(columnId);
+    return max === null ? 0 : max + 1;
+  }
+
+  /** Lightweight placement snapshot (id + completed) for every todo in a list,
+   *  oldest first — used when seeding default columns. */
+  async findPlacementByListId(
+    todoListId: string,
+  ): Promise<{ id: string; completed: boolean }[]> {
+    return this.prisma.todo.findMany({
+      where: { todoListId },
+      select: { id: true, completed: true },
+      orderBy: { createdAt: "asc" },
+    });
+  }
+
+  /** Direct column + position assignment by id (no list scoping needed — ids
+   *  come from the list being seeded/edited). Pass `completed` to also keep the
+   *  done flag in sync when the destination column changes that meaning. */
+  async assignColumn(
+    id: string,
+    columnId: string | null,
+    position: number | null,
+    completed?: boolean,
+  ): Promise<void> {
+    await this.prisma.todo.update({
+      where: { id },
+      data: {
+        columnId,
+        position,
+        ...(completed !== undefined ? { completed } : {}),
+      },
+    });
+  }
+
+  /** Every todo currently sitting in a column, oldest first. Used to compact
+   *  cards into another column when their column is deleted. */
+  async findIdsInColumn(columnId: string): Promise<string[]> {
+    const rows = await this.prisma.todo.findMany({
+      where: { columnId },
+      select: { id: true },
+      orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+    });
+    return rows.map((r) => r.id);
   }
 
   async addLabel(todoId: string, labelId: string): Promise<void> {

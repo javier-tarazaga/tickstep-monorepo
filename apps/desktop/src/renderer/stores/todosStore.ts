@@ -10,7 +10,8 @@ interface TodosState {
   error: string | null;
 
   fetchTodos: (listId: string) => Promise<void>;
-  addTodo: (listId: string, title: string) => Promise<void>;
+  /** Add a task. In board view, pass `columnId` to drop it into that column. */
+  addTodo: (listId: string, title: string, columnId?: string) => Promise<void>;
   removeTodo: (listId: string, todoId: string) => Promise<void>;
   toggleTodo: (listId: string, todoId: string) => Promise<void>;
   /** Optimistic per-field update (title, description, dueDate, priority, completed). */
@@ -101,11 +102,12 @@ export const useTodosStore = create<TodosState>((set, get) => ({
     }
   },
 
-  addTodo: async (listId: string, title: string) => {
+  addTodo: async (listId: string, title: string, columnId?: string) => {
     // Invalidate any in-flight fetch so it can't wipe this optimistic insert.
     bumpLoadToken(listId);
     // Optimistic: insert a placeholder with a temp id so the row appears on
-    // submit, then swap in the server's todo (real id) once it returns.
+    // submit, then swap in the server's todo (real id) once it returns. In board
+    // view the columnId makes it land in the right column immediately.
     const tempId = crypto.randomUUID();
     const now = new Date().toISOString();
     const placeholder: Todo = {
@@ -115,6 +117,8 @@ export const useTodosStore = create<TodosState>((set, get) => ({
       completed: false,
       dueDate: null,
       priority: null,
+      columnId: columnId ?? null,
+      position: null,
       labels: [],
       createdAt: now,
       updatedAt: now,
@@ -129,7 +133,7 @@ export const useTodosStore = create<TodosState>((set, get) => ({
     }));
 
     try {
-      const response = await apiClient.createTodo(listId, { title });
+      const response = await apiClient.createTodo(listId, { title, columnId });
       // Swap the placeholder for the server todo. Dedupe in case a live
       // `todo:created` echo already appended the real row before this resolved.
       set((state) => ({
@@ -206,13 +210,21 @@ export const useTodosStore = create<TodosState>((set, get) => ({
 
     try {
       const response = await apiClient.toggleTodo(listId, todoId);
-      // Reconcile only `completed` from the server so a concurrent edit to
-      // another field (title, labels, …) isn't clobbered by a stale snapshot.
+      // Reconcile completion *and* board placement: toggling done can move the
+      // card to/from the list's done column server-side. Other fields (title,
+      // labels, …) are left as-is so a concurrent edit isn't clobbered.
       set((state) => ({
         todosByList: {
           ...state.todosByList,
           [listId]: (state.todosByList[listId] ?? []).map((t) =>
-            t.id === todoId ? { ...t, completed: response.data.completed } : t,
+            t.id === todoId
+              ? {
+                  ...t,
+                  completed: response.data.completed,
+                  columnId: response.data.columnId,
+                  position: response.data.position,
+                }
+              : t,
           ),
         },
       }));

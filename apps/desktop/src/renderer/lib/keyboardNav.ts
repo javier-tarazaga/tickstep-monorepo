@@ -1,6 +1,8 @@
 import { useNavigationStore } from "../stores/navigationStore";
 import { useTodosStore } from "../stores/todosStore";
 import { useTodoListsStore } from "../stores/todoListsStore";
+import { useBoardColumnsStore } from "../stores/boardColumnsStore";
+import { useViewModeStore } from "../stores/viewModeStore";
 
 /** A todo reference in the order it appears on screen. */
 export interface VisibleTodoRef {
@@ -38,6 +40,43 @@ export function getVisibleTodoOrder(): VisibleTodoRef[] {
         .map((t) => ({ id: t.id, listId: list.id })),
     );
   return [...collect(false), ...collect(true)];
+}
+
+/** True when the selected list is currently shown as a board. */
+export function isBoardActive(): boolean {
+  const { currentView, selectedListId } = useNavigationStore.getState();
+  if (currentView !== "list" || !selectedListId) return false;
+  return useViewModeStore.getState().getViewMode(selectedListId) === "board";
+}
+
+/**
+ * The selected list's board as a 2D grid of todo ids — one inner array per
+ * column, left to right, each in card order (position). Used for board cursor
+ * navigation. Returns null when no list/board is active.
+ */
+export function getBoardGrid(): { listId: string; columns: string[][] } | null {
+  const { currentView, selectedListId } = useNavigationStore.getState();
+  if (currentView !== "list" || !selectedListId) return null;
+
+  const columns =
+    useBoardColumnsStore.getState().columnsByList[selectedListId] ?? [];
+  const todos = useTodosStore.getState().todosByList[selectedListId] ?? [];
+  if (columns.length === 0) return null;
+
+  const ordered = [...columns].sort((a, b) => a.position - b.position);
+  const known = new Set(ordered.map((c) => c.id));
+  const firstId = ordered[0]?.id;
+
+  const grid = ordered.map(() => [] as string[]);
+  const indexById = new Map(ordered.map((c, i) => [c.id, i]));
+  const sorted = [...todos].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+  for (const todo of sorted) {
+    const colId =
+      todo.columnId && known.has(todo.columnId) ? todo.columnId : firstId;
+    if (!colId) continue;
+    grid[indexById.get(colId) ?? 0]?.push(todo.id);
+  }
+  return { listId: selectedListId, columns: grid };
 }
 
 /** A selectable row in the Lists sidebar, in render order. */

@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import type { Todo, TodoList } from "@tickstep/shared-types";
+import type { BoardColumn, Todo, TodoList } from "@tickstep/shared-types";
 import { WS_EVENTS } from "@tickstep/shared-types";
 import { RealtimeGateway } from "./realtime.gateway";
 
@@ -24,6 +24,16 @@ export class RealtimeService {
 
   todoDeleted(listId: string, todoId: string): void {
     this.gateway.emitToList(listId, WS_EVENTS.TODO_DELETED, { listId, todoId });
+  }
+
+  /** A list's board columns changed (add/rename/reorder/delete/seed). Carries
+   * the full ordered set; cards that moved as a result arrive via todo events
+   * or a client-side resync. */
+  boardColumnsUpdated(listId: string, columns: BoardColumn[]): void {
+    this.gateway.emitToList(listId, WS_EVENTS.BOARD_COLUMNS_UPDATED, {
+      listId,
+      columns,
+    });
   }
 
   // ── List-level events → participants' user rooms ──────────────────────

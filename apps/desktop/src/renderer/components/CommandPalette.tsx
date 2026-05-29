@@ -3,6 +3,7 @@ import { useCommandStore } from "../stores/commandStore";
 import { useNavigationStore } from "../stores/navigationStore";
 import { useTodoListsStore } from "../stores/todoListsStore";
 import { useTodosStore } from "../stores/todosStore";
+import { useViewModeStore } from "../stores/viewModeStore";
 import {
   CalendarIcon,
   ListIcon,
@@ -31,7 +32,9 @@ export default function CommandPalette() {
     useCommandStore();
   const { lists } = useTodoListsStore();
   const { todosByList } = useTodosStore();
-  const { navigateToToday, navigateToList, selectTodo } = useNavigationStore();
+  const { navigateToToday, navigateToList, selectTodo, currentView, selectedListId } =
+    useNavigationStore();
+  const setViewMode = useViewModeStore((s) => s.setViewMode);
 
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
@@ -86,6 +89,25 @@ export default function CommandPalette() {
       },
     ];
 
+    if (currentView === "list" && selectedListId) {
+      actions.push(
+        {
+          id: "action-board-view",
+          label: "Switch to board view",
+          keywords: "board kanban columns view",
+          icon: <ListIcon size={15} />,
+          run: () => setViewMode(selectedListId, "board"),
+        },
+        {
+          id: "action-list-view",
+          label: "Switch to list view",
+          keywords: "list view",
+          icon: <ListIcon size={15} />,
+          run: () => setViewMode(selectedListId, "list"),
+        },
+      );
+    }
+
     const listItems: CommandItem[] = lists.map((list) => ({
       id: `list-${list.id}`,
       label: list.name,
@@ -114,7 +136,7 @@ export default function CommandPalette() {
     ];
     // navigate*/select* are stable Zustand actions; lists/todos drive the content.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paletteMode, lists, todosByList]);
+  }, [paletteMode, lists, todosByList, currentView, selectedListId]);
 
   // Filter by case-insensitive substring across label, hint, and keywords.
   const filteredGroups = useMemo<CommandGroup[]>(() => {

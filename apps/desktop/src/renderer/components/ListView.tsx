@@ -4,7 +4,9 @@ import { useTodosStore } from "../stores/todosStore";
 import { useNavigationStore } from "../stores/navigationStore";
 import { useCommandStore } from "../stores/commandStore";
 import { useShareDialogStore } from "../stores/shareDialogStore";
+import { useViewModeStore } from "../stores/viewModeStore";
 import { realtimeClient } from "../realtime";
+import BoardView from "./BoardView";
 import TodoMeta from "./TodoMeta";
 import TodoLabels from "./TodoLabels";
 
@@ -71,6 +73,8 @@ export default function ListView({ listId }: ListViewProps) {
     useTodosStore();
   const { selectTodo, selectedTodoId } = useNavigationStore();
   const openShareDialog = useShareDialogStore((s) => s.open);
+  const viewMode = useViewModeStore((s) => s.modes[listId] ?? "list");
+  const setViewMode = useViewModeStore((s) => s.setViewMode);
   const { focusedTodoId, setFocusedTodo, pendingAddTaskListId, clearAddTaskFocus } =
     useCommandStore();
 
@@ -153,6 +157,22 @@ export default function ListView({ listId }: ListViewProps) {
           )}
         </span>
         <span className="pane-head__actions">
+          <span className="view-toggle" role="group" aria-label="View mode">
+            <button
+              className={`view-toggle__btn ${viewMode === "list" ? "is-active" : ""}`}
+              onClick={() => setViewMode(listId, "list")}
+              title="List view"
+            >
+              list
+            </button>
+            <button
+              className={`view-toggle__btn ${viewMode === "board" ? "is-active" : ""}`}
+              onClick={() => setViewMode(listId, "board")}
+              title="Board view"
+            >
+              board
+            </button>
+          </span>
           <button
             className={`list-share-btn ${list.isShared ? "is-shared" : ""}`}
             onClick={() => openShareDialog(listId)}
@@ -162,6 +182,10 @@ export default function ListView({ listId }: ListViewProps) {
           </button>
         </span>
       </div>
+
+      {viewMode === "board" && <BoardView listId={listId} />}
+
+      {viewMode === "list" && (
 
       <div className="main-body">
         <form className="add-todo-form" onSubmit={handleAdd}>
@@ -247,6 +271,7 @@ export default function ListView({ listId }: ListViewProps) {
           </div>
         )}
       </div>
+      )}
     </>
   );
 }

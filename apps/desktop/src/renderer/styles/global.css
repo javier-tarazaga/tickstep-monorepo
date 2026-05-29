@@ -2825,3 +2825,279 @@ body {
 .accent {
   color: var(--amber);
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Board (Kanban) view — pane [2] alternative to the flat list
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* list | board switch in the pane head */
+.view-toggle {
+  display: inline-flex;
+  border: 1px solid var(--frame);
+  -webkit-app-region: no-drag;
+}
+.view-toggle__btn {
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+}
+.view-toggle__btn + .view-toggle__btn {
+  border-left: 1px solid var(--frame);
+}
+.view-toggle__btn:hover {
+  color: var(--amber);
+}
+.view-toggle__btn.is-active {
+  color: var(--bg);
+  background: var(--amber);
+}
+
+/* the horizontally-scrolling board body fills the pane interior */
+.board {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  padding: 10px 12px 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  animation: paneBoot 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+.board--empty {
+  align-items: center;
+  justify-content: center;
+}
+
+/* a single column */
+.board-col {
+  flex: 0 0 248px;
+  width: 248px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--frame);
+  background: var(--pane);
+}
+.board-col--done {
+  border-color: var(--amber-line);
+}
+
+.board-col__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 9px;
+  border-bottom: 1px solid var(--frame);
+}
+.board-col__name {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  cursor: text;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.board-col--done .board-col__name {
+  color: var(--amber);
+}
+.board-col__rename {
+  flex: 1;
+  min-width: 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  font-family: var(--mono);
+  color: var(--ink);
+  background: var(--pane-sunk);
+  border: 1px solid var(--amber-line);
+  padding: 2px 4px;
+}
+.board-col__count {
+  font-size: 11px;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.board-col__actions {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.board-col:hover .board-col__actions,
+.board-col--done .board-col__actions {
+  opacity: 1;
+}
+.board-col__done,
+.board-col__del {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  background: transparent;
+  border: 1px solid var(--frame);
+  padding: 1px 5px;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+}
+.board-col__done:hover {
+  color: var(--amber);
+  border-color: var(--amber);
+}
+.board-col__done.is-done {
+  color: var(--amber);
+  border-color: var(--amber-line);
+}
+.board-col__del {
+  border: none;
+  font-size: 12px;
+  padding: 1px 3px;
+}
+.board-col__del:hover {
+  color: var(--red);
+}
+
+/* the droppable card stack */
+.board-col__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.board-col__empty {
+  margin: 4px 0;
+  padding: 14px 0;
+  text-align: center;
+  font-size: 11px;
+  color: var(--ink-ghost);
+  border: 1px dashed var(--frame);
+}
+
+.board-col__foot {
+  padding: 6px;
+  border-top: 1px solid var(--frame);
+}
+.board-col__add {
+  width: 100%;
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 4px 6px;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+}
+.board-col__add:hover {
+  color: var(--amber);
+  border-color: var(--frame);
+}
+.board-col__add-input {
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--pane-sunk);
+  border: 1px solid var(--amber-line);
+  padding: 4px 6px;
+}
+
+/* a card */
+.board-card {
+  position: relative;
+  border: 1px solid var(--frame);
+  background: var(--pane-raise);
+  padding: 8px 9px;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: border-color 0.1s, background 0.1s;
+}
+.board-card:hover {
+  border-color: var(--frame-bright);
+}
+.board-card.selected {
+  background: var(--sel-bg);
+  border-left-color: var(--amber);
+}
+.board-card.focused {
+  box-shadow: inset 0 0 0 1px var(--amber-bright);
+}
+.board-card__face {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.board-card__face.is-ghost {
+  border: 1px solid var(--amber);
+  background: var(--pane-raise);
+  padding: 8px 9px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+}
+.board-card__title {
+  font-size: 12.5px;
+  color: var(--ink);
+  word-break: break-word;
+  line-height: 1.4;
+}
+.board-card__title.completed {
+  text-decoration: line-through;
+  text-decoration-color: var(--ink-ghost);
+  color: var(--ink-faint);
+}
+.board-card__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+/* trailing "add column" affordance */
+.board-add-col {
+  flex: 0 0 160px;
+  padding-top: 2px;
+}
+.board-add-col__btn {
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  background: transparent;
+  border: 1px dashed var(--frame);
+  padding: 8px;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+}
+.board-add-col__btn:hover {
+  color: var(--amber);
+  border-color: var(--amber-line);
+}
+.board-add-col__input {
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--pane-sunk);
+  border: 1px solid var(--amber-line);
+  padding: 7px 8px;
+}

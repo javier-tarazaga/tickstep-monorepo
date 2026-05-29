@@ -1,6 +1,7 @@
 import { io, type Socket } from "socket.io-client";
 import {
   WS_EVENTS,
+  type BoardColumnsUpdatedPayload,
   type ListDeletedPayload,
   type ListUpdatedPayload,
   type TodoCreatedPayload,
@@ -10,6 +11,7 @@ import {
 import { API_BASE_URL } from "./api";
 import { useTodosStore } from "./stores/todosStore";
 import { useTodoListsStore } from "./stores/todoListsStore";
+import { useBoardColumnsStore } from "./stores/boardColumnsStore";
 import { useNavigationStore } from "./stores/navigationStore";
 
 /**
@@ -48,6 +50,14 @@ class RealtimeClient {
     });
     socket.on(WS_EVENTS.TODO_DELETED, (p: TodoDeletedPayload) => {
       useTodosStore.getState().applyRemoteTodoDeleted(p.listId, p.todoId);
+    });
+    socket.on(WS_EVENTS.BOARD_COLUMNS_UPDATED, (p: BoardColumnsUpdatedPayload) => {
+      useBoardColumnsStore.getState().applyRemoteColumns(p.listId, p.columns);
+      // A structural change (add/delete/reorder) may have shifted card
+      // placements server-side; resync this list's todos so cards land right.
+      if (useTodosStore.getState().todosByList[p.listId]) {
+        void useTodosStore.getState().fetchTodos(p.listId);
+      }
     });
     socket.on(WS_EVENTS.LIST_UPDATED, (p: ListUpdatedPayload) => {
       useTodoListsStore.getState().applyRemoteListUpserted(p.list);

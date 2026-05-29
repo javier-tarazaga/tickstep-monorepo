@@ -1,3 +1,4 @@
+import type { BoardColumn } from "./board-column";
 import type { Todo } from "./todo";
 import type { TodoList } from "./todo-list";
 
@@ -17,6 +18,8 @@ export const WS_EVENTS = {
   TODO_CREATED: "todo:created",
   TODO_UPDATED: "todo:updated",
   TODO_DELETED: "todo:deleted",
+  // server -> client (todo room) — a list's board columns changed
+  BOARD_COLUMNS_UPDATED: "board:columns",
   // server -> client (user room)
   LIST_UPDATED: "list:updated",
   LIST_DELETED: "list:deleted",
@@ -45,6 +48,15 @@ export interface TodoUpdatedPayload {
 export interface TodoDeletedPayload {
   listId: string;
   todoId: string;
+}
+
+/** Sent when a list's board columns change (add/rename/reorder/delete/seed).
+ * Carries the full ordered set so clients replace their column state wholesale
+ * rather than reconciling incrementally. Card placements that shifted as a
+ * result are delivered separately via `todo:updated`. */
+export interface BoardColumnsUpdatedPayload {
+  listId: string;
+  columns: BoardColumn[];
 }
 
 /** Sent when a list is created, renamed, re-emojied, or its membership

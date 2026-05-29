@@ -3,6 +3,8 @@ import type {
   ApiResponse,
   AuthResponse,
   AuthTokens,
+  BoardColumn,
+  CreateBoardColumnDto,
   CreateLabelDto,
   CreateTodoDto,
   CreateTodoListDto,
@@ -17,6 +19,7 @@ import type {
   TodoFilters,
   TodoList,
   TodoListMember,
+  UpdateBoardColumnDto,
   UpdateLabelDto,
   UpdateTodoDto,
   UpdateTodoListDto,
@@ -250,6 +253,54 @@ export class TodoApiClient {
   ): Promise<ApiResponse<Todo>> {
     return this.request(`/todo-lists/${listId}/todos/${id}/toggle`, {
       method: "PATCH",
+    });
+  }
+
+  // ─── Board Columns (scoped to a todo list) ─────────────
+
+  async getBoardColumns(
+    listId: string,
+  ): Promise<ApiResponse<BoardColumn[]>> {
+    return this.request(`/todo-lists/${listId}/columns`);
+  }
+
+  /** Idempotently create the Todo/Doing/Done starter columns (placing existing
+   *  tasks). Returns the list's columns whether or not it created any. */
+  async ensureDefaultColumns(
+    listId: string,
+  ): Promise<ApiResponse<BoardColumn[]>> {
+    return this.request(`/todo-lists/${listId}/columns/defaults`, {
+      method: "POST",
+    });
+  }
+
+  async createBoardColumn(
+    listId: string,
+    dto: CreateBoardColumnDto,
+  ): Promise<ApiResponse<BoardColumn>> {
+    return this.request(`/todo-lists/${listId}/columns`, {
+      method: "POST",
+      body: JSON.stringify(dto),
+    });
+  }
+
+  async updateBoardColumn(
+    listId: string,
+    id: string,
+    dto: UpdateBoardColumnDto,
+  ): Promise<ApiResponse<BoardColumn>> {
+    return this.request(`/todo-lists/${listId}/columns/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(dto),
+    });
+  }
+
+  async deleteBoardColumn(
+    listId: string,
+    id: string,
+  ): Promise<ApiResponse<void>> {
+    return this.request(`/todo-lists/${listId}/columns/${id}`, {
+      method: "DELETE",
     });
   }
 

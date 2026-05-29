@@ -9,6 +9,11 @@ export interface Todo {
   completed: boolean;
   dueDate: string | null; // ISO 8601
   priority: TodoPriority | null;
+  /** The board column this task sits in, or null when it isn't placed on a
+   * board (lists with no columns, or tasks not yet assigned). */
+  columnId: string | null;
+  /** Order within its column, ascending. Null when not placed on a board. */
+  position: number | null;
   labels: Label[]; // resolved labels on this todo
   createdAt: string;
   updatedAt: string;
@@ -16,10 +21,19 @@ export interface Todo {
 
 // labels are managed via dedicated endpoints, so NOT part of these DTOs
 export type CreateTodoDto = Pick<Todo, "title"> &
-  Partial<Pick<Todo, "description" | "dueDate" | "priority">>;
+  Partial<Pick<Todo, "description" | "dueDate" | "priority" | "columnId">>;
 
 export type UpdateTodoDto = Partial<
-  Pick<Todo, "title" | "description" | "completed" | "dueDate" | "priority">
+  Pick<
+    Todo,
+    | "title"
+    | "description"
+    | "completed"
+    | "dueDate"
+    | "priority"
+    | "columnId"
+    | "position"
+  >
 >;
 
 export interface TodoFilters {

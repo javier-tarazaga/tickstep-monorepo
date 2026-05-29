@@ -10,6 +10,12 @@ export type {
 export type { Label, CreateLabelDto, UpdateLabelDto } from "./label";
 
 export type {
+  BoardColumn,
+  CreateBoardColumnDto,
+  UpdateBoardColumnDto,
+} from "./board-column";
+
+export type {
   ListMemberRole,
   TodoListMember,
   TodoList,
@@ -47,6 +53,7 @@ export type {
   TodoCreatedPayload,
   TodoUpdatedPayload,
   TodoDeletedPayload,
+  BoardColumnsUpdatedPayload,
   ListUpdatedPayload,
   ListDeletedPayload,
 } from "./ws-events";

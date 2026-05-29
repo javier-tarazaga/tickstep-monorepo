@@ -3,7 +3,13 @@ import { useNavigationStore } from "../stores/navigationStore";
 import { useCommandStore } from "../stores/commandStore";
 import { useTodosStore } from "../stores/todosStore";
 import { useUiStore, type Section } from "../stores/uiStore";
-import { getVisibleListOrder, getVisibleTodoOrder } from "../lib/keyboardNav";
+import { useViewModeStore } from "../stores/viewModeStore";
+import {
+  getBoardGrid,
+  getVisibleListOrder,
+  getVisibleTodoOrder,
+  isBoardActive,
+} from "../lib/keyboardNav";
 
 /** True when the event targets an editable field, where typing should win. */
 function isTypingTarget(target: EventTarget | null): boolean {
@@ -57,6 +63,67 @@ function toggleFocusedTodo() {
   if (!focusedTodoId) return;
   const ref = getVisibleTodoOrder().find((t) => t.id === focusedTodoId);
   if (ref) useTodosStore.getState().toggleTodo(ref.listId, ref.id);
+}
+
+/**
+ * Move the board cursor across columns (dCol) and within a column (dRow),
+ * skipping empty columns when moving sideways and clamping the row to the
+ * destination column's length. Reuses `focusedTodoId` as the single cursor.
+ */
+function moveBoardCursor(dCol: number, dRow: number) {
+  const board = getBoardGrid();
+  if (!board) return;
+  const { focusedTodoId, setFocusedTodo } = useCommandStore.getState();
+
+  let col = -1;
+  let row = -1;
+  board.columns.forEach((ids, ci) => {
+    const ri = focusedTodoId ? ids.indexOf(focusedTodoId) : -1;
+    if (ri !== -1) {
+      col = ci;
+      row = ri;
+    }
+  });
+
+  if (col === -1) {
+    // Nothing focused yet — land on the first card of the first non-empty column.
+    col = board.columns.findIndex((ids) => ids.length > 0);
+    if (col === -1) return;
+    row = 0;
+  } else {
+    if (dCol !== 0) {
+      let nc = col + dCol;
+      while (nc >= 0 && nc < board.columns.length) {
+        if (board.columns[nc]!.length > 0) break;
+        nc += dCol;
+      }
+      if (nc >= 0 && nc < board.columns.length && board.columns[nc]!.length > 0) {
+        col = nc;
+        row = Math.min(row, board.columns[col]!.length - 1);
+      }
+    }
+    if (dRow !== 0) {
+      const len = board.columns[col]!.length;
+      row = Math.min(Math.max(row + dRow, 0), Math.max(len - 1, 0));
+    }
+  }
+
+  const next = board.columns[col]?.[row];
+  if (!next) return;
+  setFocusedTodo(next);
+  requestAnimationFrame(() => {
+    document
+      .querySelector(`[data-todo-id="${next}"]`)
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  });
+}
+
+/** v: flip the selected list between list and board view. */
+function toggleViewMode() {
+  const { currentView, selectedListId } = useNavigationStore.getState();
+  if (currentView === "list" && selectedListId) {
+    useViewModeStore.getState().toggleViewMode(selectedListId);
+  }
 }
 
 /* ── Pane [1] Lists: move the sidebar cursor and open lists ───────── */
@@ -207,7 +274,34 @@ export function useGlobalShortcuts() {
         return;
       }
 
+      // v: toggle the active list between list and board view.
+      if (!mod && e.key.toLowerCase() === "v") {
+        const { currentView, selectedListId } = useNavigationStore.getState();
+        if (currentView === "list" && selectedListId) {
+          e.preventDefault();
+          toggleViewMode();
+          return;
+        }
+      }
+
       const section = useUiStore.getState().activeSection;
+
+      // Board view in pane [2] uses 2D arrow/h-j-k-l navigation.
+      if (
+        section === 2 &&
+        isBoardActive() &&
+        (e.key === "ArrowDown" ||
+          e.key === "ArrowUp" ||
+          e.key === "ArrowLeft" ||
+          e.key === "ArrowRight")
+      ) {
+        e.preventDefault();
+        if (e.key === "ArrowDown") moveBoardCursor(0, 1);
+        else if (e.key === "ArrowUp") moveBoardCursor(0, -1);
+        else if (e.key === "ArrowRight") moveBoardCursor(1, 0);
+        else moveBoardCursor(-1, 0);
+        return;
+      }
 
       // ↑/↓ drive whichever pane is active.
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
