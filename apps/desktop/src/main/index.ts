@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, ipcMain } from "electron";
+import { app, BrowserWindow, shell, ipcMain, nativeImage } from "electron";
 import { join } from "path";
 import * as tokenStorage from "./tokenStorage";
 
@@ -36,6 +36,13 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // In dev the app isn't packaged, so macOS shows the default Electron dock
+  // icon. Set it explicitly. (Packaged builds use build/icon.png via electron-builder.)
+  if (process.platform === "darwin" && process.env["ELECTRON_RENDERER_URL"]) {
+    const icon = nativeImage.createFromPath(join(__dirname, "../../build/icon.png"));
+    if (!icon.isEmpty()) app.dock?.setIcon(icon);
+  }
+
   // Auth IPC handlers — bridge between renderer and encrypted storage
   ipcMain.handle("auth:save", (_event, auth) => tokenStorage.saveAuth(auth));
   ipcMain.handle("auth:load", () => tokenStorage.loadAuth());

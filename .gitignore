@@ -42,6 +42,9 @@ apps/mobile/android/build/
 # Electron
 apps/desktop/out/
 apps/desktop/release/
+# electron-builder resources dir (input, not a build output) — keep the app icon
+!apps/desktop/build/
+!apps/desktop/build/icon.png
 
 # Misc
 *.log
