@@ -2473,6 +2473,33 @@ body {
   background: var(--red-glow);
 }
 
+/* ── Keyboard field cursor (pane [3]) ──────────────────────────────────────
+   The detail panel's ↑/↓ cursor highlights the focused field with the same
+   inset bright ring the Lists/Tasks/Board cursors use (.todo-item.focused /
+   .nav-item.is-kbd-focus / .board-card.focused). */
+.detail-item .task-title-row.is-kbd-focus,
+.field-row.is-kbd-focus,
+.detail-section.is-kbd-focus {
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px var(--amber-bright);
+}
+
+/* Roving keyboard focus on an item inside a detail-panel picker — reuse the
+   menu's own hover treatment plus a hairline ring so the cursor reads clearly.
+   Covers both the ↑/↓ items and a label row's →/← rename/delete actions. The
+   native date input and the clear button keep their own accents. */
+.task-popover-menu [data-pop-item]:focus,
+.task-popover-menu [data-pop-action]:focus {
+  outline: none;
+  background: var(--sel-bg);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--amber-line);
+}
+.task-popover-clear:focus {
+  outline: none;
+  background: var(--red-glow);
+}
+
 /* footer */
 .task-panel-footer {
   flex-shrink: 0;

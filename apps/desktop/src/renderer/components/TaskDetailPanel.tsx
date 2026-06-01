@@ -31,6 +31,7 @@ import {
   priorityMeta,
   timeAgo,
 } from "../lib/taskDetail";
+import { isTypingTarget } from "../lib/keyboardNav";
 
 function slug(name: string): string {
   return (
@@ -252,6 +253,12 @@ export default function TaskDetailPanel() {
 type OpenPopover = "date" | "priority" | "label" | null;
 const MAX_DESCRIPTION_HEIGHT = 420;
 
+/* The fields the pane-[3] keyboard cursor steps through, top to bottom. `list`
+   is read-only so it's not a stop. Enter on a field activates it: toggling
+   status, opening a picker, or entering a textarea to edit. */
+const FIELD_KEYS = ["title", "status", "prio", "due", "tags", "note"] as const;
+type FieldKey = (typeof FIELD_KEYS)[number];
+
 function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
   const closeTodo = useNavigationStore((s) => s.closeTodo);
   const { updateTodo, toggleTodo, addLabelToTodo, removeLabelFromTodo } =
@@ -263,10 +270,13 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
   const listName = useTodoListsStore(
     (s) => s.lists.find((l) => l.id === listId)?.name,
   );
+  const activeSection = useUiStore((s) => s.activeSection);
 
   const [title, setTitle] = useState(todo.title);
   const [description, setDescription] = useState(todo.description ?? "");
   const [open, setOpen] = useState<OpenPopover>(null);
+  /* The field highlighted by the pane-[3] keyboard cursor (↑/↓). */
+  const [focusedFieldKey, setFocusedFieldKey] = useState<FieldKey | null>(null);
 
   const [creatingLabel, setCreatingLabel] = useState(false);
   const [newLabelName, setNewLabelName] = useState("");
@@ -280,6 +290,19 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
   const descRef = useRef<HTMLTextAreaElement>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // Mirror the mutable values the window keydown handler reads so it can
+  // subscribe once (stable deps) without closing over stale state.
+  const openRef = useRef(open);
+  openRef.current = open;
+  const fieldRef = useRef(focusedFieldKey);
+  fieldRef.current = focusedFieldKey;
+  // True while an inline label sub-form (create / rename / delete-confirm) is
+  // open in the tags picker — Esc dismisses that form before the picker itself.
+  const labelFormOpen =
+    creatingLabel || editingLabelId !== null || deletingLabelId !== null;
+  const labelFormOpenRef = useRef(labelFormOpen);
+  labelFormOpenRef.current = labelFormOpen;
 
   useEffect(() => setTitle(todo.title), [todo.title]);
   useEffect(() => setDescription(todo.description ?? ""), [todo.description]);
@@ -322,19 +345,189 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
     return () => ro.disconnect();
   }, []);
 
-  /* Esc closes the open popover first, then the panel. */
+  /* ── Pane-[3] keyboard control ────────────────────────────────────────────
+     The detail panel is the keyboard's third pane. When it's active, ↑/↓ move a
+     field cursor and Enter activates the focused field (toggle status, open a
+     picker, or enter a textarea to edit). When a picker is open, ↑/↓ rove focus
+     through its items while Enter/Space act on the focused control natively. Esc
+     closes the open picker first, then the panel. Mirrors the cursor model the
+     Lists/Tasks panes use and yields to text editing via isTypingTarget. The
+     listener stays on the bubble phase so the title/note textareas can
+     stopPropagation their own Esc (revert + blur) before it reaches here. */
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      setOpen((cur) => {
-        if (cur) return null;
-        closeTodo();
-        return null;
+    const moveField = (delta: number) => {
+      setFocusedFieldKey((cur) => {
+        const i = cur
+          ? FIELD_KEYS.indexOf(cur)
+          : delta > 0
+            ? -1
+            : FIELD_KEYS.length;
+        // idx is clamped within bounds, so the lookup is always defined.
+        const idx = Math.min(Math.max(i + delta, 0), FIELD_KEYS.length - 1);
+        const next = FIELD_KEYS[idx]!;
+        requestAnimationFrame(() => {
+          contentRef.current
+            ?.querySelector(`[data-field="${next}"]`)
+            ?.scrollIntoView({ block: "nearest" });
+        });
+        return next;
       });
     };
+
+    const pickerItems = () =>
+      Array.from(
+        contentRef.current?.querySelectorAll<HTMLElement>(
+          ".task-popover [data-pop-item]",
+        ) ?? [],
+      );
+
+    // ↑/↓ move between picker items (priority options, label rows, the New-label
+    // button, form controls). When focus sits on a label row's inline action,
+    // the containing-item fallback keeps ↑/↓ stepping row-to-row.
+    const movePickerFocus = (delta: number) => {
+      const items = pickerItems();
+      if (items.length === 0) return;
+      const active = document.activeElement;
+      let i = active instanceof HTMLElement ? items.indexOf(active) : -1;
+      if (i === -1) i = items.findIndex((el) => el.contains(active));
+      if (i === -1) i = delta > 0 ? -1 : items.length;
+      items[Math.min(Math.max(i + delta, 0), items.length - 1)]?.focus();
+    };
+
+    // →/← step onto a label row's inline actions (rename / delete) and back to
+    // the row. Only label rows expose [data-pop-action] children, so this is a
+    // no-op for priority options, the New-label button, and form controls.
+    const moveRowAction = (delta: number) => {
+      const active = document.activeElement;
+      if (!(active instanceof HTMLElement)) return;
+      const row = active.closest("[data-pop-item]");
+      if (!row) return;
+      const actions = Array.from(
+        row.querySelectorAll<HTMLElement>("[data-pop-action]"),
+      );
+      if (actions.length === 0) return;
+      const cur = actions.indexOf(active);
+      if (delta > 0) actions[Math.min(cur + 1, actions.length - 1)]?.focus();
+      else if (cur <= 0) (row as HTMLElement).focus();
+      else actions[cur - 1]?.focus();
+    };
+
+    const focusEnd = (el: HTMLTextAreaElement | null) => {
+      if (!el) return;
+      el.focus();
+      const n = el.value.length;
+      el.setSelectionRange(n, n);
+    };
+
+    const activateField = (key: FieldKey) => {
+      switch (key) {
+        case "title":
+          focusEnd(titleRef.current);
+          break;
+        case "note":
+          focusEnd(descRef.current);
+          break;
+        case "status":
+          toggleTodo(listId, todo.id);
+          break;
+        case "prio":
+          setOpen("priority");
+          break;
+        case "due":
+          setOpen("date");
+          break;
+        case "tags":
+          setOpen("label");
+          break;
+      }
+    };
+
+    const onKey = (e: KeyboardEvent) => {
+      // Esc works from any pane while a task is open: close the picker, else the
+      // panel. The title/note textareas stopPropagation their own Esc, so those
+      // revert-and-blur before this runs.
+      if (e.key === "Escape") {
+        if (openRef.current) {
+          if (labelFormOpenRef.current) {
+            // Dismiss the inline label form but keep the tags picker open.
+            setCreatingLabel(false);
+            setEditingLabelId(null);
+            setDeletingLabelId(null);
+          } else {
+            setOpen(null);
+          }
+        } else {
+          closeTodo();
+        }
+        return;
+      }
+
+      // Field/picker navigation only when the detail pane owns the keyboard.
+      if (useUiStore.getState().activeSection !== 3) return;
+
+      const typing = isTypingTarget(document.activeElement);
+
+      if (openRef.current) {
+        // Inside a picker: rove focus with ↑/↓; Enter/Space act on the focused
+        // control natively. While typing in a label/date input, let the keys
+        // edit text instead.
+        if (typing) return;
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          movePickerFocus(1);
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          movePickerFocus(-1);
+        } else if (e.key === "ArrowRight") {
+          e.preventDefault();
+          moveRowAction(1);
+        } else if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          moveRowAction(-1);
+        }
+        return;
+      }
+
+      // Editing the title/note: arrows move the caret, so don't steal them.
+      if (typing) return;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        moveField(1);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        moveField(-1);
+      } else if (e.key === "Enter") {
+        if (!fieldRef.current) return;
+        e.preventDefault();
+        activateField(fieldRef.current);
+      }
+    };
+
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [closeTodo]);
+  }, [closeTodo, toggleTodo, listId, todo.id]);
+
+  /* Entering the detail pane seeds the cursor on the first field so there's an
+     immediate "you are here" anchor; once set it persists across pane switches. */
+  useEffect(() => {
+    if (activeSection === 3) setFocusedFieldKey((cur) => cur ?? FIELD_KEYS[0]);
+  }, [activeSection]);
+
+  /* When a picker opens, move focus into it (its current value if marked, else
+     the first item) so ↑/↓ and Enter operate on it right away. */
+  useEffect(() => {
+    if (!open) return;
+    const id = requestAnimationFrame(() => {
+      const root = contentRef.current?.querySelector(".task-popover");
+      if (!root) return;
+      const target =
+        root.querySelector<HTMLElement>("[data-pop-item][data-current]") ??
+        root.querySelector<HTMLElement>("[data-pop-item]");
+      target?.focus();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [open]);
 
   /* ── Field savers ──────────────────────────────────── */
   const saveTitle = () => {
@@ -423,13 +616,18 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
     ? `~/lists/${slug(listName)}`
     : "~/lists/—";
 
+  // Highlight ring for the keyboard field cursor, shown only while pane [3] is
+  // the active pane (matching how the sidebar gates its own cursor visual).
+  const fieldCls = (key: FieldKey) =>
+    activeSection === 3 && focusedFieldKey === key ? " is-kbd-focus" : "";
+
   return (
     <>
       <div className="task-panel-content" ref={contentRef}>
         {/* ITEM */}
         <div className="detail-item">
           <div className="detail-label detail-label--ruled">item</div>
-          <div className="task-title-row">
+          <div className={`task-title-row${fieldCls("title")}`} data-field="title">
             <button
               className={`task-checkbox ${todo.completed ? "checked" : ""}`}
               onClick={() => toggleTodo(listId, todo.id)}
@@ -462,7 +660,7 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
         <div className="detail-fields">
           <div className="detail-label detail-label--ruled">meta</div>
           {/* status */}
-          <div className="field-row">
+          <div className={`field-row${fieldCls("status")}`} data-field="status">
             <span className="field-key">status</span>
             <span className="field-val">
               <button
@@ -480,7 +678,7 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
           </div>
 
           {/* priority */}
-          <div className="field-row">
+          <div className={`field-row${fieldCls("prio")}`} data-field="prio">
             <span className="field-key">prio</span>
             <span className="field-val">
               <div className="task-chip-wrap">
@@ -504,6 +702,8 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
                   <div className="task-popover-menu">
                     <button
                       className="task-menu-item"
+                      data-pop-item
+                      data-current={!pri ? true : undefined}
                       onClick={() => setPriority(null)}
                     >
                       <span className="priority-dot priority-none" />
@@ -518,6 +718,8 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
                       <button
                         key={m.value}
                         className="task-menu-item"
+                        data-pop-item
+                        data-current={todo.priority === m.value ? true : undefined}
                         onClick={() => setPriority(m.value)}
                       >
                         <span className={`priority-dot ${m.dotClass}`} />
@@ -536,7 +738,7 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
           </div>
 
           {/* due */}
-          <div className="field-row">
+          <div className={`field-row${fieldCls("due")}`} data-field="due">
             <span className="field-key">due</span>
             <span className="field-val">
               <div className="task-chip-wrap">
@@ -552,6 +754,7 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
                     <input
                       type="date"
                       className="task-date-input"
+                      data-pop-item
                       value={todo.dueDate ? todo.dueDate.slice(0, 10) : ""}
                       onChange={(e) =>
                         setDue(
@@ -565,6 +768,7 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
                     {todo.dueDate && (
                       <button
                         className="task-popover-clear"
+                        data-pop-item
                         onClick={() => setDue(null)}
                       >
                         Clear due date
@@ -577,7 +781,7 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
           </div>
 
           {/* tags */}
-          <div className="field-row">
+          <div className={`field-row${fieldCls("tags")}`} data-field="tags">
             <span className="field-key">tags</span>
             <span className="field-val">
               {todo.labels.map((label) => (
@@ -635,12 +839,14 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
                             <div className="label-row-form-actions">
                               <button
                                 className="label-form-cancel"
+                                data-pop-item
                                 onClick={cancelEditLabel}
                               >
                                 Cancel
                               </button>
                               <button
                                 className="label-create-submit"
+                                data-pop-item
                                 onClick={submitEditLabel}
                                 disabled={!editLabelName.trim()}
                               >
@@ -661,12 +867,15 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
                             <div className="label-row-form-actions">
                               <button
                                 className="label-form-cancel"
+                                data-pop-item
+                                autoFocus
                                 onClick={() => setDeletingLabelId(null)}
                               >
                                 Cancel
                               </button>
                               <button
                                 className="label-delete-confirm-btn"
+                                data-pop-item
                                 onClick={() => confirmDeleteLabel(label.id)}
                               >
                                 Delete
@@ -683,6 +892,7 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
                           className="task-menu-item label-menu-row"
                           role="button"
                           tabIndex={0}
+                          data-pop-item
                           onClick={() => toggleLabel(label.id)}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {
@@ -706,6 +916,7 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
                               className="label-row-btn"
                               title="Rename / recolor"
                               aria-label={`Edit ${label.name}`}
+                              data-pop-action
                               onClick={(e) => {
                                 e.stopPropagation();
                                 startEditLabel(label);
@@ -717,6 +928,7 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
                               className="label-row-btn label-row-btn-danger"
                               title="Delete label"
                               aria-label={`Delete ${label.name}`}
+                              data-pop-action
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setEditingLabelId(null);
@@ -762,6 +974,7 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
                         </div>
                         <button
                           className="label-create-submit"
+                          data-pop-item
                           onClick={submitNewLabel}
                           disabled={!newLabelName.trim()}
                         >
@@ -771,6 +984,7 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
                     ) : (
                       <button
                         className="task-menu-item task-menu-create"
+                        data-pop-item
                         onClick={() => setCreatingLabel(true)}
                       >
                         <span className="task-menu-create-icon">
@@ -795,7 +1009,7 @@ function PanelBody({ todo, listId }: { todo: Todo; listId: string }) {
         </div>
 
         {/* NOTE */}
-        <div className="detail-section">
+        <div className={`detail-section${fieldCls("note")}`} data-field="note">
           <div className="detail-label detail-label--ruled">note</div>
           <textarea
             ref={descRef}

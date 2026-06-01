@@ -10,14 +10,8 @@ import {
   getVisibleListOrder,
   getVisibleTodoOrder,
   isBoardActive,
+  isTypingTarget,
 } from "../lib/keyboardNav";
-
-/** True when the event targets an editable field, where typing should win. */
-function isTypingTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  const tag = target.tagName;
-  return tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable;
-}
 
 /** Release a focused text field so the keyboard returns to pane navigation. */
 function blurActiveTypingTarget() {
@@ -325,8 +319,13 @@ export function useGlobalShortcuts() {
         e.preventDefault();
         const delta = e.key === "ArrowDown" ? 1 : -1;
         if (section === 1) moveListCursor(delta);
-        else if (section === 3) scrollActiveDetail(delta * 64);
-        else moveCursor(delta);
+        else if (section === 3) {
+          // With a task open, the detail panel owns ↑/↓ to drive its field
+          // cursor (handled inside TaskDetailPanel). Fall back to scrolling the
+          // body only when nothing is selected (the empty state).
+          if (useNavigationStore.getState().selectedTodoId) return;
+          scrollActiveDetail(delta * 64);
+        } else moveCursor(delta);
         return;
       }
 

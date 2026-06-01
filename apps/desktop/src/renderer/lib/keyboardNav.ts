@@ -4,6 +4,15 @@ import { useTodoListsStore } from "../stores/todoListsStore";
 import { useBoardColumnsStore } from "../stores/boardColumnsStore";
 import { useViewModeStore } from "../stores/viewModeStore";
 
+/** True when the target is an editable field, where typing should win over
+ *  keyboard navigation. Shared by the global shortcut handler and the detail
+ *  panel's field cursor so both yield to in-progress text editing. */
+export function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable;
+}
+
 /** A todo reference in the order it appears on screen. */
 export interface VisibleTodoRef {
   id: string;
